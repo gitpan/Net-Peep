@@ -14,7 +14,7 @@ use vars qw{ @ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION $AUTOLOAD @Attributes
 %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 @EXPORT = qw( );
-$VERSION = do { my @r = (q$Revision: 1.3 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+$VERSION = do { my @r = (q$Revision: 1.4 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 $LOGGER = new Net::Peep::Log;
 
@@ -40,7 +40,7 @@ sub name {
 		return $self->{'NAME'};
 	    } elsif (exists $self->{'IP'}) {
 		my $iaddr = inet_aton($self->{'IP'});
-		my $name = (gethostbyaddr($iaddr,AF_INET))[0];
+		my ($name,$aliases,$addrtype,$length,@addrs) = gethostbyaddr($iaddr,AF_INET);
 		return $name ? $name : undef;
 	    } else {
 		confess "Cannot obtain host name:  No host name or IP address has been specified.";
@@ -61,8 +61,13 @@ sub ip {
 	    if (exists $self->{'IP'}) {
 		return $self->{'IP'};
 	    } elsif (exists $self->{'NAME'}) {
-		my $ip = inet_ntoa((gethostbyname($self->{'NAME'}))[4]);
-		return $ip ? $ip : undef;
+		my ($name,$aliases,$addrtype,$length,@addrs) = gethostbyname($self->{'NAME'});
+		if (@addrs) {
+		    my $ip = inet_ntoa($addrs[0]);
+		    return $ip ? $ip : undef;
+		} else {
+		    confess "Cannot obtain IP address:  Could not get host by name for ".$self->{'NAME'}.".";
+		}    
 	    } else {
 		confess "Cannot obtain IP address:  No host name or IP address has been specified.";
 	    }

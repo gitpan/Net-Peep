@@ -14,7 +14,7 @@ use vars qw{ @ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION $debug $logfile $__LO
 %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 @EXPORT = qw( );
-$VERSION = do { my @r = (q$Revision: 1.5 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+$VERSION = do { my @r = (q$Revision: 1.6 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 $debug = $__LOGFILE = 0;
 
@@ -113,13 +113,13 @@ sub mark {
 
     my $timeofday = gettimeofday;
     $self->{"__MARK"}->{$identifier} = [$timeofday];
-    $self->debug(3,"Mark [$identifier:$timeofday] set.");
+    $self->debug(9,"Mark [$identifier:$timeofday] set.");
 
     return 1;
 
 } # end sub mark
 
-sub benchMark {
+sub benchmark {
 
     # set a time against which future benchmarks can be measured
     my $self = shift;
@@ -130,11 +130,11 @@ sub benchMark {
 
     my $interval = tv_interval($self->{"__MARK"}->{$identifier},[gettimeofday]);
 
-    $self->log("$interval seconds have passed since mark [$identifier:".$self->{"__MARK"}->{$identifier}."]");
+    $self->debug(9,"$interval seconds have passed since mark [$identifier:".@{$self->{"__MARK"}->{$identifier}}."]");
 
     return $interval;
 
-} # end sub mark
+} # end sub benchmark
 
 # one should endeavor to always exit gracefully
 
@@ -255,7 +255,7 @@ sent to the logfile.
 
 =head1 AUTHOR
 
-Collin Starkweather <collin.starkweather@collinstarkweather.com>
+Collin Starkweather <collin.starkweather@colorado.edu>
 Copyright (C) 2001
 
 =head1 SEE ALSO
@@ -268,6 +268,9 @@ http://peep.sourceforge.net
 =head1 CHANGE LOG
 
 $Log: Log.pm,v $
+Revision 1.6  2001/11/05 03:40:56  starky
+Commit in preparation for the 0.4.5 release.
+
 Revision 1.5  2001/09/23 08:53:57  starky
 The initial checkin of the 0.4.4 release candidate 1 clients.  The release
 includes (but is not limited to):
@@ -323,6 +326,9 @@ a work-out-of-the-box system.
 Revision 1.3  =head1 CHANGE LOG
  
 $Log: Log.pm,v $
+Revision 1.6  2001/11/05 03:40:56  starky
+Commit in preparation for the 0.4.5 release.
+
 Revision 1.5  2001/09/23 08:53:57  starky
 The initial checkin of the 0.4.4 release candidate 1 clients.  The release
 includes (but is not limited to):

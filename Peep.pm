@@ -12,7 +12,7 @@ use vars qw{ @ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION };
 %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 @EXPORT = qw( );
-$VERSION = '0.4.4.2';
+$VERSION = '0.4.5';
 
 # This module serves no useful purpose at this time other than as a
 # placeholder for documentation
@@ -583,15 +583,6 @@ it ideal for a variety of needs.
 You can find more information on Big Brother at
 
   http://www.bb4.com
-
-For those who need massive, robust, and sophisticated monitoring tools
-and services, there are a variety of commercial products and services
-on the market such as System Shepherd.  (I feel honor bound to mention
-at this point that I have worked for the maker of System Shepherd,
-Absolute Performance, Inc., at various times.)  You can find more
-information about System Shepherd at
-
-  http://www.absolute-performance.com
 
 Those who enjoy Peep may also enjoy checking out logplay, which is
 similar in concept but fills a different niche.

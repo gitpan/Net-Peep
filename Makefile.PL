@@ -3,7 +3,7 @@ use ExtUtils::MakeMaker;
 # the contents of the Makefile that is written.
 WriteMakefile(
     'NAME'		=> 'Net::Peep',
-    'VERSION'		=> '0.4.4.2', # VERSION_FROM seems to break 5.00503
+    'VERSION'		=> '0.4.5', # VERSION_FROM seems to break 5.00503
     'PREREQ_PM'		=> { 
       File::Tail => 0.98,
       Time::HiRes => 1.20,
@@ -12,6 +12,7 @@ WriteMakefile(
       Proc::ProcessTable => 0.32
       },
     'PM'                => {
+                            'Peep.pm' => '$(INST_LIB)/Net/Peep.pm', 
                             'bin/peck' => '$(INST_SCRIPT)/peck',
                             'bin/logparser' => '$(INST_SCRIPT)/logparser',
                             'bin/sysmonitor' => '$(INST_SCRIPT)/sysmonitor',

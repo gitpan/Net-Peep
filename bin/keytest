@@ -29,38 +29,24 @@ $SIG{'INT'} = \&shutdown;
 $SIG{'QUIT'} = \&shutdown;
 
 # Intialize the client library
-my $client = new Net::Peep::Client ('keytest');
+my $client = new Net::Peep::Client;
+$client->name('keytest');
 
 # Parser the command-line options. We make the call with empty
 # arguments because keytest only uses the defaults
-$client->parseopts();
+my ($autodiscovery,$port,$server) = (0,DEFAULT_PORT,DEFAULT_SERVER);
+my %options = ('autodiscovery!'=>\$autodiscovery,'port=s'=>\$port,'server=s'=>\$server);
+$client->initialize(%options);
 
-# now parse the conf file.  the client will automatically recognize
-# # the config argument on the command-line or default to /etc/peep.conf
-# # if no config argument is given.
-$client->parseconf();
+# now parse the conf file.  no special parsing needs to be done by
+# keytest since it doesn't have its own configuration section, so the
+# parser will be passed a blank code reference.
+$client->parser( sub { } );
 
 # get a Net::Peep::Conf object which is now populated with all of the
 # configuration information found in the peep.conf file as well as the
 # values of the standard command-line options
-my $conf = $client->getconf();
-
-# Print a help message if the user asks for help
-$client->pods() if $conf->getOption('help');
-
-# Now set the autodiscovery option purposely since we want to run
-# the old fashioned way.
-$conf->setOption('autodiscovery', 0);
-
-# Check if we've set the server and port. If not, use the default
-unless ($conf->optionExists('server')) {
-	warn "No server specified: using default [" . DEFAULT_SERVER . "]...\n";
-	$conf->setOption('server', DEFAULT_SERVER);
-}
-unless ($conf->optionExists('port')) {
-	warn "No port specified: using default [" . DEFAULT_PORT . "]...\n";
-	$conf->setOption('port', DEFAULT_PORT);
-}
+my $conf = $client->configure();
 
 # instantiate a Net::Peep::BC object.  Feed it the Net::Peep::Conf object so it
 # knows what kind of environment it's being born into.
@@ -136,7 +122,7 @@ sub pecker {
 	}
 
 	# Now send off the event to the server
-	$main::peck->send(
+	$main::peck->send('keytest',
 		'type'     => $type,
 		'sound'    => $sound,
 		'volume'   => $main::volume,

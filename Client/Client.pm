@@ -22,7 +22,7 @@ use vars qw{ @ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION };
 %EXPORT_TAGS = ( 'all' => [ qw( INTERVAL MAX_INTERVAL ADJUST_AFTER ) ] );
 @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 @EXPORT = qw( );
-$VERSION = do { my @r = (q$Revision: 1.8 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+$VERSION = do { my @r = (q$Revision: 1.11 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 # These are in seconds and are the parameters for File::Tail
 
@@ -451,9 +451,9 @@ sub filter {
     
     my $name = $object->name();
 
-    $self->logger()->log("Checking [$name] ...");
-
     unless ($nogrp) {
+
+	$self->logger()->debug(9,"Checking group [$name] against group and excluded group lists ...");
 
 	my $group = $object->group();
 
@@ -522,6 +522,21 @@ See the main Peep client documentation or
 
 for more information on usage of this module.
 
+=head1 OPTIONS
+
+The following options are common to all Peep clients:
+
+  --config=[PATH]       Path to the configuration file to use.
+  --debug=[NUMBER]      Enable debugging. (Def:  0)
+  --nodaemon            Do not run in daemon mode.  (Def:  daemon)
+  --pidfile=[PATH]      The file to write the pid out to.  (Daemon only.)
+  --output=[PATH]       The file to log output to. (Def: stderr)
+  --noautodiscovery     Disables autodiscovery and enables the server and port options.
+                        (Default:  autodiscovery)
+  --server=[HOST]       The host (or IP address) to connect to.  
+  --port=[PORT NO]      The port to use.
+  --help                Prints this documentation.
+
 =head1 EXPORT
 
 None by default.
@@ -530,14 +545,21 @@ None by default.
 
     new() - The constructor
 
-    parseopts($client,%options) - Sets the value (using the setOption
-    method of the Net::Peep::Conf object) of all command-line options
-    parsed by Getopt::Long for the client $client.  Additional options
-    may be specified using %options.  For more information on the
-    format of the %options hash, see Getopt::Long.
+    name($name) - Sets/gets the name of the client.  All clients must
+    have a name.
 
-    parseconf() - Returns a configuration object.  To be called after
-    a call to parseopts().
+    initialize(%options) - Sets the value (using the setOption method
+    of the Net::Peep::Conf object) of all command-line options parsed
+    by Getopt::Long for the client.  Additional options may be
+    specified using %options.  For more information on the format of
+    the %options hash, see Getopt::Long.
+
+    configure() - Returns a configuration object.  To be called after
+    a call to initialize().
+
+    parser($coderef) - Specifies a callback, which must be in the form
+    of a code reference, to be used to parse the config ... end config
+    block of the Peep configuration file for the client.
 
     callback($coderef) - Specifies a callback, which must be in the
     form of a code reference, to be used in the MainLoop method.
@@ -594,6 +616,20 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 =head1 CHANGE LOG
 
 $Log: Client.pm,v $
+Revision 1.11  2001/11/05 03:40:56  starky
+Commit in preparation for the 0.4.5 release.
+
+Revision 1.10  2001/10/13 07:22:33  starky
+Updated documentation to include a description of all default client
+command-line options.  Also updated the METHODS section to match the
+0.4.4 API.
+
+Revision 1.9  2001/10/05 06:41:19  starky
+Fixed a "feature" in which a client would fatal error if it was not in
+forking mode (i.e., if the --nodaemon flag was *not* set) and no pidfile
+option was specified (e.g., through the --pidfile option).  Also
+incremented the release number to 0.4.4.2 for a release to the CPAN.
+
 Revision 1.8  2001/10/01 05:20:05  starky
 Hopefully the final commit before release 0.4.4.  Tied up some minor
 issues, did some beautification of the log messages, added some comments,
