@@ -1,6 +1,9 @@
-Revision history for Perl extension Net::Peep::Notifier.
+The change log can be found in both the CVS respository at
 
-0.01  Tue Aug 14 21:10:06 2001
-	- original version; created by h2xs 1.20 with options
-		-XA Net::Peep::Notifier
+  cvs.peep.sourceforge.net:/cvs/peep
 
+and following the Log keyword in each the PODs for each 
+module.
+
+Please contact collin.starkweather@colorado.edu with any 
+questions.

@@ -20,7 +20,7 @@ use vars qw{ @ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION $LOGGER
 %EXPORT_TAGS = ( );
 @EXPORT_OK = ( );
 @EXPORT = qw( );
-$VERSION = do { my @r = (q$Revision$ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+$VERSION = do { my @r = (q$Revision: 1.1 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 $LOGGER = Net::Peep::Log->new();
 

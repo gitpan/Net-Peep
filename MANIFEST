@@ -1,5 +1,6 @@
 Changes
 MANIFEST
+MANIFEST.SKIP
 Makefile.PL
 Peep.pm
 test.pl
@@ -96,11 +97,13 @@ Mail/Makefile.PL
 Mail/test.pl
 Notification/Changes
 Notification/MANIFEST
+Notification/MANIFEST.SKIP
 Notification/Makefile.PL
 Notification/Notification.pm
 Notification/test.pl
 Notifier/Changes
 Notifier/MANIFEST
+Notifier/MANIFEST.SKIP
 Notifier/Makefile.PL
 Notifier/Notifier.pm
 Notifier/test.pl

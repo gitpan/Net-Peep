@@ -21,7 +21,7 @@ use vars qw{ @ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION };
 %EXPORT_TAGS = ( 'all' => [ qw( INTERVAL MAX_INTERVAL ADJUST_AFTER ) ] );
 @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 @EXPORT = qw( );
-$VERSION = do { my @r = (q$Revision: 1.10 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+$VERSION = do { my @r = (q$Revision: 1.11 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 # These are in seconds and are the parameters for File::Tail
 
@@ -282,27 +282,6 @@ sub tail {
 
 } # end sub tail
 
-sub event {
-
-    # add an event to an array of events
-
-    my $self = shift;
-    my $event = shift || confess "event not found";
-    push @{$self->{'EVENTS'}}, $event;
-
-} # event
-
-sub events {
-
-    # return an array of events identified by calls to the event
-    # method
-
-    my $self = shift;
-    my $event = shift || confess "event not found";
-    return wantarray ? @{$self->{'EVENTS'}} : $self->{'EVENTS'};
-
-} # events
-
 sub parse {
 
     my $self = shift;
@@ -407,11 +386,13 @@ sub addEvent {
 
 sub events {
 
-    # returns the list of events built with the addEvent method
+    # return an array of events identified by calls to the event
+    # method
+
     my $self = shift;
     return wantarray ? @{$self->{'EVENTS'}} : $self->{'EVENTS'};
 
-} # end sub events
+} # events
 
 1;
 
@@ -478,6 +459,9 @@ http://peep.sourceforge.net
 =head1 CHANGE LOG
 
 $Log: Logparser.pm,v $
+Revision 1.11  2001/10/02 19:09:44  starky
+Removed superfluous event() and events() method.
+
 Revision 1.10  2001/10/01 05:20:05  starky
 Hopefully the final commit before release 0.4.4.  Tied up some minor
 issues, did some beautification of the log messages, added some comments,
