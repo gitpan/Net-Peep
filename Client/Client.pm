@@ -22,7 +22,7 @@ use vars qw{ @ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION };
 %EXPORT_TAGS = ( 'all' => [ qw( INTERVAL MAX_INTERVAL ADJUST_AFTER ) ] );
 @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 @EXPORT = qw( );
-$VERSION = do { my @r = (q$Revision: 1.11 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+$VERSION = do { my @r = (q$Revision: 1.12 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 # These are in seconds and are the parameters for File::Tail
 
@@ -197,8 +197,8 @@ sub initialize {
 	if ($found) {
 		$self->logger()->debug(1,"The Peep configuration file has been identified as [$found]");
 	} else {
-		$self->logger()->debug(1,"No peep configuration file has been identified.");
-		return 0;
+		$self->logger()->log("No peep configuration file could be found.  Exiting gracefully ....");
+		exit 2;
 	}
 
 	$conf->setOption('config',$found);
@@ -616,6 +616,10 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 =head1 CHANGE LOG
 
 $Log: Client.pm,v $
+Revision 1.12  2001/11/06 03:52:19  starky
+Fixed bug in which a client would fatal error in a mysterious way if
+the configuration file could not be found.
+
 Revision 1.11  2001/11/05 03:40:56  starky
 Commit in preparation for the 0.4.5 release.
 

@@ -12,7 +12,7 @@ use vars qw{ @ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION };
 %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 @EXPORT = qw( );
-$VERSION = '0.4.5';
+$VERSION = '0.4.5.1';
 
 # This module serves no useful purpose at this time other than as a
 # placeholder for documentation
