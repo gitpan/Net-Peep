@@ -43,7 +43,6 @@ Conf/test.pl
 Host/Changes
 Host/Host.pm
 Host/MANIFEST
-Host/MANIFEST.SKIP
 Host/Makefile.PL
 Host/test.pl
 Log/Changes

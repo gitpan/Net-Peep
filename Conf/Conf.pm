@@ -22,7 +22,7 @@ our @ISA = qw( Exporter );
 our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw( );
-our $VERSION = do { my @r = (q$Revision: 1.5 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+our $VERSION = do { my @r = (q$Revision: 1.6 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 sub new {
 
@@ -64,6 +64,13 @@ sub getVersion {
 	}
 
 } # end sub getVersion
+
+sub versionExists {
+
+	my $self = shift;
+	return exists $self->{"__VERSION"};
+
+} # end sub versionExists
 
 sub setApp {
 
@@ -687,6 +694,15 @@ None by default.
   should the logparser check the regular expression for this event
   against log files?
 
+  setVersion() - Sets the version number.
+
+  getVersion() - Return the version number taken from the Peep configuration
+  file (e.g., peep.conf) if it exists.  Confesses if the version has not been
+  set yet.
+
+  versionExists() - Returns 1 if a version has been set with the setVersion()
+  method, 0 otherwise.
+
 =head1 AUTHOR
 
 Collin Starkweather Copyright (C) 2001
@@ -700,6 +716,9 @@ http://peep.sourceforge.net
 =head1 CHANGE LOG
 
 $Log: Conf.pm,v $
+Revision 1.6  2001/08/06 04:20:35  starky
+Fixed bug #447844.
+
 Revision 1.5  2001/07/23 20:17:45  starky
 Fixed a minor bug in setting groups and exclude flags from the command-line
 with the logparser.
@@ -762,6 +781,9 @@ a work-out-of-the-box system.
 Revision 1.6  =head1 CHANGE LOG
  
 $Log: Conf.pm,v $
+Revision 1.6  2001/08/06 04:20:35  starky
+Fixed bug #447844.
+
 Revision 1.5  2001/07/23 20:17:45  starky
 Fixed a minor bug in setting groups and exclude flags from the command-line
 with the logparser.

@@ -14,7 +14,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw( );
-our $VERSION = do { my @r = (q$Revision: 1.2 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+our $VERSION = do { my @r = (q$Revision: 1.3 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 sub new {
 
@@ -254,7 +254,9 @@ sub parseClientEvents {
 
 	$self->logger()->debug(1,"\t\tParsing events for client [$client] ...");
 
-	my @version = split /\./, $self->configObject()->getVersion();
+	my @version = $self->configObject()->versionExists() 
+		? split /\./, $self->configObject()->getVersion()
+			: ();
 
 	if (@version && $version[1] > 4 || $version[2] > 1) {
 
@@ -520,6 +522,9 @@ http://peep.sourceforge.net
 =head1 CHANGE LOG
 
 $Log: Parser.pm,v $
+Revision 1.3  2001/08/06 04:20:36  starky
+Fixed bug #447844.
+
 Revision 1.2  2001/07/23 17:46:29  starky
 Added versioning to the configuration file as well as the ability to
 specify groups in addition to / as a replacement for event letters.
