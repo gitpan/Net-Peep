@@ -1,4 +1,4 @@
-package Net::Peep::Parse;
+package Net::Peep::Parser;
 
 require 5.005_62;
 use strict;
@@ -77,14 +77,29 @@ sub parseConfig {
 		$msg = substr $msg, 0, 40;
 		$self->logger()->debug(9,"Parsing [$configfile] line [$msg ...]");
 		next if $line =~ /^\s*#/;
-		$self->parseClass(\*FILE, $1)  if $line =~ /^\s*class (.*)/;
-		$self->parseClient(\*FILE, $1) if $line =~ /^\s*client (.*)/;
-		$self->parseEvents(\*FILE, $1)     if $line =~ /^\s*events/;
-		$self->parseStates(\*FILE, $1)     if $line =~ /^\s*states/;
+		$self->parseVersion(\*FILE, $1) if $line =~ /^\s*version (.*)/;
+		$self->parseClass(\*FILE, $1)   if $line =~ /^\s*class (.*)/;
+		$self->parseClient(\*FILE, $1)  if $line =~ /^\s*client (.*)/;
+		$self->parseEvents(\*FILE, $1)  if $line =~ /^\s*events/;
+		$self->parseStates(\*FILE, $1)  if $line =~ /^\s*states/;
+		$self->parseHosts(\*FILE, $1)   if $line =~ /^\s*hosts/;
 	}
 	close FILE;
 
 } # end sub parseConfig
+
+sub parseVersion {
+
+	my $self = shift;
+
+	my $file      = shift || confess "file not found";
+	my $version = shift || confess "version not found";
+
+	$self->logger()->debug(1,"Parsing version [$version] ...");
+
+	$self->configObject()->setVersion($version);
+
+} # end sub parseVersion
 
 sub parseClass {
 	my $self = shift;
@@ -239,23 +254,52 @@ sub parseClientEvents {
 
 	$self->logger()->debug(1,"\t\tParsing events for client [$client] ...");
 
-	while (my $line = shift @text) {
-		next if $line =~ /^\s*#/;
-		last if $line =~ /^\s*end/;
+	my @version = split /\./, $self->configObject()->getVersion();
 
-		my $name;
-		$line =~ /([\w-]+)\s+([a-zA-Z])\s+(\d+)\s+(\d+)\s+"(.*)"/;
+	if (@version && $version[1] > 4 || $version[2] > 1) {
 
-		my $clientEvent = {
-			'name' => $1,
-			'option-letter' => $2,
-			'location' => $3,
-			'priority' => $4,
-			'regex' => $5
-	};
+		while (my $line = shift @text) {
+			next if $line =~ /^\s*#/;
+			last if $line =~ /^\s*end/;
 
-		$self->configObject()->addClientEvent($client,$clientEvent);
-		$self->logger()->debug(1,"\t\t\tClient event [$1] added.");
+			my $name;
+			$line =~ /^\s*([\w-]+)\s+([\w-]+)\s+([a-zA-Z])\s+(\d+)\s+(\d+)\s+"(.*)"/;
+
+			my $clientEvent = {
+				'name' => $1,
+				'group' => $2,
+				'option-letter' => $3,
+				'location' => $4,
+				'priority' => $5,
+				'regex' => $6
+			};
+
+			$self->configObject()->addClientEvent($client,$clientEvent);
+			$self->logger()->debug(1,"\t\t\tClient event [$1] added.");
+
+		}
+
+	} else {
+
+		while (my $line = shift @text) {
+			next if $line =~ /^\s*#/;
+			last if $line =~ /^\s*end/;
+
+			my $name;
+			$line =~ /([\w-]+)\s+([a-zA-Z])\s+(\d+)\s+(\d+)\s+"(.*)"/;
+
+			my $clientEvent = {
+				'name' => $1,
+				'option-letter' => $2,
+				'location' => $3,
+				'priority' => $4,
+				'regex' => $5
+			};
+
+			$self->configObject()->addClientEvent($client,$clientEvent);
+			$self->logger()->debug(1,"\t\t\tClient event [$1] added.");
+
+		}
 
 	}
 
@@ -318,6 +362,32 @@ sub parseClientDefault {
 			}
 		}
 
+		if ($line =~ /^\s*groups(.*)/) {
+			my @groups = split /,/, $1;
+			map { s/\s+//g } @groups;
+			my $groups = \@groups;
+
+			if ($self->configObject()->optionExists('groups')) {
+				$self->logger()->debug(1,"\t\tGroup list [@groups] not set:  It was set previously.");
+			} else {
+				$self->configObject()->setOption('groups',$groups);
+				$self->logger()->debug(1,"\t\tGroup list set to [@groups].");
+			}
+		}
+
+		if ($line =~ /^\s*exclude(.*)/) {
+			my @exclude = split /,/, $1;
+			map { s/\s+//g } @exclude;
+			my $exclude = \@exclude;
+
+			if ($self->configObject()->optionExists('exclude')) {
+				$self->logger()->debug(1,"\t\tExclude list [@exclude] not set:  It was set previously.");
+			} else {
+				$self->configObject()->setOption('exclude',$exclude);
+				$self->logger()->debug(1,"\t\tExclude list set to [@exclude].");
+			}
+		}
+
 		if ($line =~ /^\s*logfile(.*)/) {
 			my $logfile = $1;
 			$logfile =~ s/\s+//g;
@@ -376,13 +446,13 @@ __END__
 
 =head1 NAME
 
-Net::Peep::Parse - Perl extension for parsing configuration files for
+Net::Peep::Parser - Perl extension for parsing configuration files for
 Peep: The Network Auralizer.
 
 =head1 SYNOPSIS
 
-  use Net::Peep::Parse;
-  my $parser = new Net::Peep::Parse;
+  use Net::Peep::Parser;
+  my $parser = new Net::Peep::Parser;
 
   # loadConfig returns a Net::Peep::Conf object
 
@@ -397,7 +467,7 @@ Peep: The Network Auralizer.
 
 =head1 DESCRIPTION
 
-Net::Peep::Parse parses a Peep configuration file and returns a
+Net::Peep::Parser parses a Peep configuration file and returns a
 Net::Peep::Conf object whose accessors contain all the information
 found in the configuration file.
 
@@ -449,89 +519,18 @@ http://peep.sourceforge.net
 
 =head1 CHANGE LOG
 
-$Log: Parse.pm,v $
-Revision 1.2  2001/05/07 02:39:19  starky
-A variety of bug fixes and enhancements:
-o Fixed bug 421729:  Now the --output flag should work as expected and the
---logfile flag should not produce any unexpected behavior.
-o Documentation has been updated and improved, though more improvements
-and additions are pending.
-o Removed print STDERRs I'd accidentally left in the last commit.
-o Other miscellaneous and sundry bug fixes in anticipation of a 0.4.2
-release.
+$Log: Parser.pm,v $
+Revision 1.2  2001/07/23 17:46:29  starky
+Added versioning to the configuration file as well as the ability to
+specify groups in addition to / as a replacement for event letters.
+Also changed the Net::Peep::Parse namespace to Net::Peep::Parser.
+(I don't know why I ever named an object by a verb!)
 
-Revision 1.1  2001/04/23 10:13:19  starky
-Commit in preparation for release 0.4.1.
-
-o Altered package namespace of Peep clients to Net::Peep
-  at the suggestion of a CPAN administrator.
-o Changed Peep::Client::Log to Net::Peep::Client::Logparser
-  and Peep::Client::System to Net::Peep::Client::Sysmonitor
-  for clarity.
-o Made adjustments to documentation.
-o Fixed miscellaneous bugs.
-
-Revision 1.6  2001/03/31 07:51:35  mgilfix
-
-
-  Last major commit before the 0.4.0 release. All of the newly rewritten
-clients and libraries are now working and are nicely formatted. The server
-installation has been changed a bit so now peep.conf is generated from
-the template file during a configure - which brings us closer to having
-a work-out-of-the-box system.
-
-Revision 1.6   2001/03/31 02:17:00  mgilfix
-Made the final adjustments to for the 0.4.0 release so everything
-now works. Lots of changes here: autodiscovery works in every
-situation now (client up, server starts & vice-versa), clients
-now shutdown elegantly with a SIGTERM or SIGINT and remove their
-pidfiles upon exit, broadcast and server definitions in the class
-definitions is now parsed correctly, the client libraries now
-parse the events so they can translate from names to internal
-numbers. There's probably some other changes in there but many
-were made :) Also reformatted all of the code, so it uses
-consistent indentation.
-
-Revision 1.5  2001/03/28 02:54:20  starky
-Fixed a bug in the regex in the parseClientHosts method.
-
-Revision 1.4  2001/03/28 02:41:48  starky
-Created a new client called 'pinger' which pings a set of hosts to check
-whether they are alive.  Made some adjustments to the client modules to
-accomodate the new client.
-
-Also fixed some trivial pre-0.4.0-launch bugs.
-
-Revision 1.3  2001/03/27 00:44:19  starky
-Completed work on rearchitecting the Peep client API, modified client code
-to be consistent with the new API, and added and tested the sysmonitor
-client, which replaces the uptime client.
-
-This is the last major commit prior to launching the new client code,
-though the API or architecture may undergo some initial changes following
-launch in response to comments or suggestions from the user and developer
-base.
-
-Revision 1.2  2001/03/18 17:17:46  starky
-Finally got LogParser (now called logparser) running smoothly.
-
-Revision 1.1  2001/03/16 18:31:59  starky
-Initial commit of some very broken code which will eventually comprise
-a rearchitecting of the Peep client libraries; most importantly, the
-Perl modules.
-
-A detailed e-mail regarding this commit will be posted to the Peep
-develop list (peep-develop@lists.sourceforge.net).
-
-Contact me (Collin Starkweather) at
-
-  collin.starkweather@colorado.edu
-
-or
-
-  collin.starkweather@collinstarkweather.com
-
-with any questions.
+Revision 1.1  2001/07/23 16:18:35  starky
+Changed the namespace of Net::Peep::Parse to Net::Peep::Parser.  (Why did
+I ever create an object whose namespace was a verb anyway?!?)  This file
+was consequently moved from peep/client/Net/Peep/Parse to its current
+location.
 
 
 =cut

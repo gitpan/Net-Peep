@@ -1,5 +1,5 @@
 Changes
 MANIFEST
 Makefile.PL
-Parse.pm
+Pinger.pm
 test.pl

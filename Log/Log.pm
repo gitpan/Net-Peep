@@ -14,7 +14,7 @@ our @EXPORT = qw( );
 
 use vars qw{ $debug $logfile $__LOGFILE $__LOGHANDLE };
 
-our $VERSION = do { my @r = (q$Revision: 1.2 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+our $VERSION = do { my @r = (q$Revision: 1.3 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 $debug = $__LOGFILE = 0;
 
@@ -237,7 +237,7 @@ Copyright (C) 2001
 
 =head1 SEE ALSO
 
-perl(1), peepd(1), Net::Peep::BC, Net::Peep::Parse, logparser,
+perl(1), peepd(1), Net::Peep::BC, Net::Peep::Parser, logparser,
 sysmonitor.
 
 http://peep.sourceforge.net
@@ -245,6 +245,12 @@ http://peep.sourceforge.net
 =head1 CHANGE LOG
 
 $Log: Log.pm,v $
+Revision 1.3  2001/07/23 17:46:29  starky
+Added versioning to the configuration file as well as the ability to
+specify groups in addition to / as a replacement for event letters.
+Also changed the Net::Peep::Parse namespace to Net::Peep::Parser.
+(I don't know why I ever named an object by a verb!)
+
 Revision 1.2  2001/05/07 02:39:19  starky
 A variety of bug fixes and enhancements:
 o Fixed bug 421729:  Now the --output flag should work as expected and the
@@ -278,6 +284,12 @@ a work-out-of-the-box system.
 Revision 1.3  =head1 CHANGE LOG
  
 $Log: Log.pm,v $
+Revision 1.3  2001/07/23 17:46:29  starky
+Added versioning to the configuration file as well as the ability to
+specify groups in addition to / as a replacement for event letters.
+Also changed the Net::Peep::Parse namespace to Net::Peep::Parser.
+(I don't know why I ever named an object by a verb!)
+
 Revision 1.2  2001/05/07 02:39:19  starky
 A variety of bug fixes and enhancements:
 o Fixed bug 421729:  Now the --output flag should work as expected and the

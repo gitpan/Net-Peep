@@ -6,6 +6,7 @@ use warnings;
 use Carp;
 use Data::Dumper;
 use Net::Peep::Log;
+use Net::Peep::Host;
 
 require Exporter;
 
@@ -21,7 +22,7 @@ our @ISA = qw( Exporter );
 our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw( );
-our $VERSION = do { my @r = (q$Revision: 1.2 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+our $VERSION = do { my @r = (q$Revision: 1.5 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 sub new {
 
@@ -41,6 +42,28 @@ sub logger {
 	return $self->{'__LOGGER'};
 
 } # end sub logger
+
+sub setVersion {
+
+	my $self = shift;
+	my $version = shift || confess "Cannot set version:  No version information found";
+	$self->{"__VERSION"} = $version;
+	$self->logger()->debug(1,"Configuration file version [$version] identified.");
+	return 1;
+
+} # end sub setVersion
+
+sub getVersion {
+
+	my $self = shift;
+
+	if (exists $self->{"__VERSION"}) {
+		return $self->{"__VERSION"};
+	} else {
+		confess "Cannot get version:  No version information has been set.";
+	}
+
+} # end sub getVersion
 
 sub setApp {
 
@@ -427,6 +450,47 @@ sub getClientEvents {
 
 } # end sub getClientEvents
 
+sub checkClientEvent {
+
+	my $self = shift;
+	my $event = shift || confess "Event not found";
+
+	my $return = 0;
+
+	my ($group,$letter) = ('','');
+
+	$group = $event->{'group'} if exists $event->{'group'};
+	$letter = $event->{'option-letter'} if exists $event->{'option-letter'};
+
+	my @groups = ();
+	my @exclude = ();
+	my @events = ();
+
+	@events = split //, $self->getOption('events') if $self->optionExists('events');
+	@groups = @{ $self->getOption('groups') } if $self->optionExists('groups');
+	@exclude = @{ $self->getOption('exclude') } if $self->optionExists('exclude');
+
+	# first check the events option
+	
+	for my $letter_option (@events) {
+		$return = 1 if $letter eq $letter_option;
+	}
+
+	if (grep /^all$/, @groups) {
+		$return = 1;
+		for my $exclude_option (@exclude) {
+			$return = 0 if $group eq $exclude_option;
+		}
+	} else {
+		for my $group_option (@groups) {
+			$return = 1 if $group eq $group_option;
+		}
+	}
+
+	return $return;
+
+} # end sub checkClientEvent
+
 sub addClientHost {
 
 	my $self = shift;
@@ -436,7 +500,11 @@ sub addClientHost {
 	confess "Cannot set client host [$name]:  Expecting a hash ref (instead of [$value])."
 		unless ref($value) eq 'HASH';
 
-	my $clienthost = $value->{'name'};
+	my $ip = gethostbyname($value->{'name'});
+
+	my $clienthost = new Net::Peep::Host;
+	$clienthost->setName($value->{'name'});
+	$clienthost->setEvent($value->{'event'});
 
 	push @ { $self->{"__CLIENTHOST"}->{$name} }, $value;
 
@@ -469,7 +537,7 @@ sub getClientHosts {
 	confess "Cannot get information for the clienthost [$name]:  No information has been set."
 		unless exists $self->{"__CLIENTHOST"} && exists $self->{"__CLIENTHOST"}->{$name};
 
-	return wantarray ? @ { $self->{"__CLIENTHOST"}->{$name} } : $self->{"__CLIENTHOST"}->{$name};
+	return $self->{"__CLIENTHOST"}->{$name};
 
 } # end sub getClientHosts
 
@@ -549,7 +617,7 @@ Auralizer.
 
 Net::Peep::Conf provides an object interface for Peep configuration
 information, typically extracted from a Peep configuration file (e.g.,
-/etc/peep.conf) by the Net::Peep::Parse module.
+/etc/peep.conf) by the Net::Peep::Parser module.
 
 =head1 EXPORT
 
@@ -613,19 +681,39 @@ None by default.
 
   getClientEventList() - Returns all events associated with all clients.
 
+  checkClientEvent() - The method name is a question: Based on
+  command-line or configuration file settings, should this client
+  event be considered active in the current client?  For example,
+  should the logparser check the regular expression for this event
+  against log files?
+
 =head1 AUTHOR
 
 Collin Starkweather Copyright (C) 2001
 
 =head1 SEE ALSO
 
-perl(1), peepd(1), Net::Peep::BC, Net::Peep::Parse, Net::Peep::Log.
+perl(1), peepd(1), Net::Peep::BC, Net::Peep::Parser, Net::Peep::Log.
 
 http://peep.sourceforge.net
 
 =head1 CHANGE LOG
 
 $Log: Conf.pm,v $
+Revision 1.5  2001/07/23 20:17:45  starky
+Fixed a minor bug in setting groups and exclude flags from the command-line
+with the logparser.
+
+Revision 1.4  2001/07/23 17:46:29  starky
+Added versioning to the configuration file as well as the ability to
+specify groups in addition to / as a replacement for event letters.
+Also changed the Net::Peep::Parse namespace to Net::Peep::Parser.
+(I don't know why I ever named an object by a verb!)
+
+Revision 1.3  2001/07/20 03:19:58  starky
+Some trivial changes.  They normally wouldn't be committed at this stage,
+but the code is being prepped for the 0.4.2 release.
+
 Revision 1.2  2001/05/07 02:39:19  starky
 A variety of bug fixes and enhancements:
 o Fixed bug 421729:  Now the --output flag should work as expected and the
@@ -674,6 +762,20 @@ a work-out-of-the-box system.
 Revision 1.6  =head1 CHANGE LOG
  
 $Log: Conf.pm,v $
+Revision 1.5  2001/07/23 20:17:45  starky
+Fixed a minor bug in setting groups and exclude flags from the command-line
+with the logparser.
+
+Revision 1.4  2001/07/23 17:46:29  starky
+Added versioning to the configuration file as well as the ability to
+specify groups in addition to / as a replacement for event letters.
+Also changed the Net::Peep::Parse namespace to Net::Peep::Parser.
+(I don't know why I ever named an object by a verb!)
+
+Revision 1.3  2001/07/20 03:19:58  starky
+Some trivial changes.  They normally wouldn't be committed at this stage,
+but the code is being prepped for the 0.4.2 release.
+
 Revision 1.2  2001/05/07 02:39:19  starky
 A variety of bug fixes and enhancements:
 o Fixed bug 421729:  Now the --output flag should work as expected and the

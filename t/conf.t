@@ -6,7 +6,7 @@ END {print "not ok\n", exit 1 unless $loaded;}
 
 use Net::Peep::Log;
 use Net::Peep::Conf;
-use Net::Peep::Parse;
+use Net::Peep::Parser;
 
 $loaded = 1;
 
@@ -19,7 +19,7 @@ my ($conf,$parser);
 eval {
 
 	$conf = new Net::Peep::Conf;
-	$parser = new Net::Peep::Parse;
+	$parser = new Net::Peep::Parser;
 
 };
 

@@ -11,7 +11,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw( );
-our $VERSION = '0.4.1.1';
+our $VERSION = '0.4.2';
 
 # This module serves no useful purpose at this time other than as a
 # placeholder for documentation
@@ -33,6 +33,12 @@ single network events, but the network as a whole "sounds normal."
 
 This document serves as an introduction to the Peep clients and the
 Peep client architecture.
+
+=head1 REQUIRES
+
+  File::Tail
+  Time::HiRes
+  Net::Ping::External
 
 =head1 INTRODUCTION
 
@@ -81,7 +87,7 @@ The Peep client library is composed of the following modules:
   Net::Peep::Conf      The Peep configuration object.  An  
                        object representation of peep.conf.
 
-  Net::Peep::Parse     The Peep configuration file parser.  Reads  
+  Net::Peep::Parser    The Peep configuration file parser.  Reads  
                        peep.conf and populates Peep::Conf 
                        appropriately.
 

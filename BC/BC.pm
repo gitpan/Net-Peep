@@ -11,15 +11,16 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw( );
-our $VERSION = do { my @r = (q$Revision: 1.3 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+our $VERSION = do { my @r = (q$Revision: 1.7 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 use Socket;
 use Sys::Hostname;
-use Net::Peep::Parse;
+use Net::Peep::Parser;
 use Net::Peep::Conf;
 use Net::Peep::Log;
+use Net::Peep::Scheduler;
 
-use vars qw{ %Leases %Servers %Defaults $Alarmtime };
+use vars qw{ %Leases %Servers %Defaults $Scheduler $Alarmtime };
 
 %Leases = %Servers = ();
 
@@ -31,6 +32,8 @@ use vars qw{ %Leases %Servers %Defaults $Alarmtime };
 	dither => 0,
 	sound => 0
 );
+
+$Scheduler = new Net::Peep::Scheduler;
 
 $Alarmtime = 30;
 
@@ -107,13 +110,20 @@ sub initialize {
 	setsockopt SOCKET, SOL_SOCKET, SO_BROADCAST | SO_REUSEADDR, 1;
 
 	#Let everyone know we're alive
-	$self->hello();
+	$self->hello( PROT_BCCLIENT );
 
 	#Start up the alarm. Once this handler gets started, we'll have it
 	#work concurrently with the program to handle host lists
 	if ($configuration->getOption('autodiscovery')) {
-		$SIG{'ALRM'} = sub { $self->handlealarm() };
-		alarm($Alarmtime);
+		$Scheduler->schedulerAddEvent(
+			$self->getConfiguration()->getApp(),
+			$Alarmtime,
+			0.0,
+			'client',
+			sub { $self->handlealarm( PROT_CLIENTSTILLALIVE ) },
+			'',
+			1 # 1 => repeated event, 0 => single event
+		);
 	}
 
 } # end sub initialize
@@ -121,6 +131,7 @@ sub initialize {
 sub hello {
 
 	my $self = shift;
+	my $constant = shift;
 	my $configuration = $self->getConfiguration() || confess "Error:  Configuration not found";
 
 	# Send out our broadcast to let everybody know we're alive
@@ -137,8 +148,12 @@ sub hello {
 			my $bcaddr = sockaddr_in($port, $iaddr);
 
 			#Assemble the packet and send it
-			my $packet = $self->assemble_bc_packet($configuration);
-			$self->logger()->debug(9,"Sending a friendly hello to address [$zone:$port] ...");
+			my $packet = $self->assemble_bc_packet($constant);
+			if (defined($constant) && $constant == PROT_CLIENTSTILLALIVE) {
+				$self->logger()->debug(9,"Letting [$zone:$port] know we're still alive ...");
+			} else {
+				$self->logger()->debug(9,"Sending a friendly hello to address [$zone:$port] ...");
+			}
 			defined(send(SOCKET, $packet, 0, $bcaddr)) or confess "Send broadcast error: $!";
 			$self->logger()->debug(9,"\tPacket of length ".length($packet)." sent.");
 		}
@@ -172,12 +187,14 @@ sub setConfiguration {
 sub assemble_bc_packet {
 
 	my $self = shift;
+	my $constant = shift;
 	my $configuration = $self->getConfiguration();
 	my $identifier = join PROT_CLASSDELIM, ($configuration->getClassList());
 	$identifier .= PROT_CLASSDELIM;
-	return pack("CCCCA128", PROT_MAJORVER,
+	return pack("CCCCA128", 
+		PROT_MAJORVER,
 		PROT_MINORVER,
-		PROT_BCCLIENT, 
+		$constant, 
 		0, 
 		$identifier);
 
@@ -209,12 +226,12 @@ sub send {
 
 	my $configuration = $self->getConfiguration();
 
-	my $type = $options{'type'} || $self->getOption('type');
-	my $location = $options{'location'} || $self->getOption('location');
-	my $priority = $options{'priority'} || $self->getOption('priority');
-	my $volume = $options{'volume'} || $self->getOption('volume');
-	my $dither = $options{'dither'} || $self->getOption('dither');
-	my $sound = $options{'sound'} || $self->getOption('sound');
+	my $type = exists($options{'type'}) ? $options{'type'} : $self->getOption('type');
+	my $location = exists($options{'location'}) ? $options{'location'} : $self->getOption('location');
+	my $priority = exists($options{'priority'}) ? $options{'priority'} :  $self->getOption('priority');
+	my $volume = exists($options{'volume'}) ? $options{'volume'} : $self->getOption('volume');
+	my $dither = exists($options{'dither'}) ? $options{'dither'} : $self->getOption('dither');
+	my $sound = exists($options{'sound'}) ? $options{'sound'} : $self->getOption('sound');
 
 	$self->logger()->debug(9,"type=[$type] location=[$location] priority=[$priority] volume=[$volume] dither=[$dither] sound=[$sound]");
 
@@ -318,8 +335,9 @@ sub handlealarm {
 	#our server list. Finally, we purge the server list of any impurities and
 	#carry on with out business
 	my $self = shift;
+	my $constant = shift;
 
-	$self->hello();
+	$self->hello($constant);
 	$self->updateserverlist();
 	$self->purgeserverlist();
 
@@ -333,9 +351,6 @@ sub handlealarm {
 	} else {
 		$self->logger()->debug(9,"There are currently no known servers.");
 	}
-
-	$SIG{'ALRM'} = sub { $self->handlealarm() };
-	alarm($Alarmtime); 
 
 	return 1;
 
@@ -463,7 +478,7 @@ sub addserver {
 	my ($serverport,$serverip) = unpack_sockaddr_in($server);
 	$serverip = inet_ntoa($serverip);
 	$self->logger()->debug(7,"\tSending client BC packet to [$serverip:$serverport] ...");
-	defined(CORE::send(SOCKET, $self->assemble_bc_packet(), 0, $server)) or confess "Send clientbc error: $!";
+	defined(CORE::send(SOCKET, $self->assemble_bc_packet(PROT_BCCLIENT), 0, $server)) or confess "Send clientbc error: $!";
 	$self->logger()->debug(7,"\tClient BC packet sent successfully.");
 
 	return 1;
@@ -619,7 +634,7 @@ Collin Starkweather <collin.starkweather@colorado.edu> Copyright (C) 2000
 
 =head1 SEE ALSO
 
-perl(1), peepd(1), Net::Peep::Dumb, Net::Peep::Log, Net::Peep::Parse, Net::Peep::Log.
+perl(1), peepd(1), Net::Peep::Dumb, Net::Peep::Log, Net::Peep::Parser, Net::Peep::Log.
 
 http://peep.sourceforge.net
 
@@ -639,6 +654,28 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 =head1 CHANGE LOG
 
 $Log: BC.pm,v $
+Revision 1.7  2001/07/23 17:46:29  starky
+Added versioning to the configuration file as well as the ability to
+specify groups in addition to / as a replacement for event letters.
+Also changed the Net::Peep::Parse namespace to Net::Peep::Parser.
+(I don't know why I ever named an object by a verb!)
+
+Revision 1.6  2001/07/16 22:24:47  starky
+Fix for bug #439881:  Volumes of 0 are now correctly identified.
+
+Revision 1.5  2001/06/05 20:01:20  starky
+Corrected bug in which wrong type of broadcast constant was being
+sent by the client; i.e., the PROT_BCCLIENT was being sent when
+the PROT_CLIENTSTILLALIVE should have been.  The clients and
+servers worked as expected despite the bug, so no changes in
+functionality will be apparent from the bug fix.  It is, however,
+the right way to do things :-)
+
+Revision 1.4  2001/06/04 08:37:27  starky
+Prep work for the 0.4.2 release.  The wake-up for autodiscovery packets
+to be sent is now scheduled through Net::Peep::Scheduler.  Also modified
+some docs in Net::Peep slightly.
+
 Revision 1.3  2001/05/07 02:39:19  starky
 A variety of bug fixes and enhancements:
 o Fixed bug 421729:  Now the --output flag should work as expected and the

@@ -11,7 +11,7 @@ use File::Tail;
 use Pod::Text;
 use Net::Peep::BC;
 use Net::Peep::Log;
-use Net::Peep::Parse;
+use Net::Peep::Parser;
 
 require Exporter;
 
@@ -19,7 +19,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = ( 'all' => [ qw( INTERVAL MAX_INTERVAL ADJUST_AFTER ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw( );
-our $VERSION = do { my @r = (q$Revision: 1.4 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+our $VERSION = do { my @r = (q$Revision: 1.5 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 # These are in seconds and are the parameters for File::Tail
 
@@ -237,7 +237,7 @@ sub MainLoop {
 sub parseconf {
 
 	my $self = shift;
-	Net::Peep::Parse->new()->loadConfig( $self->getconf() );
+	Net::Peep::Parser->new()->loadConfig( $self->getconf() );
 	return 1;
 
 } # end sub parseconf
@@ -377,6 +377,12 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 =head1 CHANGE LOG
 
 $Log: Client.pm,v $
+Revision 1.5  2001/07/23 17:46:29  starky
+Added versioning to the configuration file as well as the ability to
+specify groups in addition to / as a replacement for event letters.
+Also changed the Net::Peep::Parse namespace to Net::Peep::Parser.
+(I don't know why I ever named an object by a verb!)
+
 Revision 1.4  2001/05/07 02:39:19  starky
 A variety of bug fixes and enhancements:
 o Fixed bug 421729:  Now the --output flag should work as expected and the

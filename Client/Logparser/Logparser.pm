@@ -15,7 +15,7 @@ our @ISA = qw(Exporter Net::Peep::Client);
 our %EXPORT_TAGS = ( 'all' => [ qw( INTERVAL MAX_INTERVAL ADJUST_AFTER ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw( );
-our $VERSION = do { my @r = (q$Revision: 1.4 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+our $VERSION = do { my @r = (q$Revision: 1.7 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 # These are in seconds and are the parameters for File::Tail
 
@@ -95,9 +95,16 @@ sub Start {
 
 	my $events = '';
 	my $logfile = '';
-	my $pidfile = '/var/run/logparser.pid';
+	my $pidfile = DEFAULT_PID_FILE;
+	my @groups = ();
+	my @exclude = ();
 
-	my %options = ( 'events=s' => \$events, 'logfile=s' => \$logfile, 'pidfile=s' => \$pidfile );
+	my %options = ( 
+		'events=s' => \$events, 
+		'logfile=s' => \$logfile, 
+		'pidfile=s' => \$pidfile,
+		'groups=s' => \@groups,
+		'exclude=s' => \@exclude );
 
 	$self->parseopts(%options) || $self->pods();
 
@@ -111,8 +118,20 @@ sub Start {
 			       $conf->getOption('server') && $conf->getOption('port');
 	}
 
-	$events = $conf->getOption('events') if ! $events && $conf->optionExists('events');
-
+	# convert the group and exclude strings to array refs
+	if (scalar(@groups)) {
+	    @groups = split /,/, join ',', @groups;
+	    map {s/\s+//g} @groups;
+	    $conf->setOption('groups',\@groups);
+	}
+	if (scalar(@exclude)) {
+	    @exclude = split /,/, join ',', @exclude;
+	    map {s/\s+//g} @exclude;
+	    $conf->setOption('exclude',\@exclude);
+	}
+	$self->logger()->debug(1,"After parsing command-line options, ");
+	$self->logger()->debug(1,"\tRecognized event groups are [@groups]");
+	$self->logger()->debug(1,"\tExcluded event groups are [@exclude]");
 	# Check whether the pidfile option was set. If not, use the default
 	unless ($conf->optionExists('pidfile')) {
 		$self->logger()->debug(3,"No pid file specified. Using default [" . DEFAULT_PID_FILE . "]");
@@ -127,7 +146,7 @@ sub Start {
 
 	$self->logger()->debug(9,"Registering callback ...");
 
-	$self->callback(sub { $self->loop($events); });
+	$self->callback(sub { $self->loop(); });
 
 	$self->logger()->debug(9,"\tCallback registered ...");
 
@@ -140,7 +159,6 @@ sub Start {
 sub loop {
 
 	my $self = shift;
-	my $events = shift || confess "Error:  No events specified.  What's the point?";
 
 	select(STDOUT);
 
@@ -205,14 +223,15 @@ sub parse {
 
 	my $found = 0;
 
-	for my $event ($configuration->getClientEvents('logparser')) {
+	for my $event (grep $configuration->checkClientEvent($_), $configuration->getClientEvents('logparser')) {
 
 		# if we've already matched an event ignore the remaining events
 
-		unless ($found) {
+		# FIXIT: Note to self: Tomorrow modify this so only
+		# groups identified or letters identified actually
+		# initiate a parse and regex match
 
-			# FIXIT: Build the pecking object creation tomorrow (see the
-			# top of logparser)
+		unless ($found) {
 
 			my $name = $event->{'name'};
 			my $regex = $event->{'regex'};
@@ -285,7 +304,7 @@ Michael Gilfix <mgilfix@eecs.tufts.edu> Copyright (C) 2001
 
 =head1 SEE ALSO
 
-perl(1), peepd(1), Net::Peep::BC, Net::Peep::Log, Net::Peep::Parse,
+perl(1), peepd(1), Net::Peep::BC, Net::Peep::Log, Net::Peep::Parser,
 Net::Peep::Client, logparser.
 
 http://peep.sourceforge.net
@@ -293,6 +312,21 @@ http://peep.sourceforge.net
 =head1 CHANGE LOG
 
 $Log: Logparser.pm,v $
+Revision 1.7  2001/07/23 20:17:44  starky
+Fixed a minor bug in setting groups and exclude flags from the command-line
+with the logparser.
+
+Revision 1.6  2001/07/23 17:46:29  starky
+Added versioning to the configuration file as well as the ability to
+specify groups in addition to / as a replacement for event letters.
+Also changed the Net::Peep::Parse namespace to Net::Peep::Parser.
+(I don't know why I ever named an object by a verb!)
+
+Revision 1.5  2001/06/04 08:37:27  starky
+Prep work for the 0.4.2 release.  The wake-up for autodiscovery packets
+to be sent is now scheduled through Net::Peep::Scheduler.  Also modified
+some docs in Net::Peep slightly.
+
 Revision 1.4  2001/05/07 02:39:19  starky
 A variety of bug fixes and enhancements:
 o Fixed bug 421729:  Now the --output flag should work as expected and the
