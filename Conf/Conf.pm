@@ -21,7 +21,7 @@ our @ISA = qw( Exporter );
 our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw( );
-our $VERSION = do { my @r = (q$Revision: 1.1 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+our $VERSION = do { my @r = (q$Revision: 1.2 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 sub new {
 
@@ -623,22 +623,19 @@ perl(1), peepd(1), Net::Peep::BC, Net::Peep::Parse, Net::Peep::Log.
 
 http://peep.sourceforge.net
 
-=head1 TERMS AND CONDITIONS
-
-You should have received a file COPYING containing license terms
-along with this program; if not, write to Michael Gilfix
-(mgilfix@eecs.tufts.edu) for a copy.
-
-This version of Peep is open source; you can redistribute it and/or
-modify it under the terms listed in the file COPYING.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
 =head1 CHANGE LOG
 
 $Log: Conf.pm,v $
+Revision 1.2  2001/05/07 02:39:19  starky
+A variety of bug fixes and enhancements:
+o Fixed bug 421729:  Now the --output flag should work as expected and the
+--logfile flag should not produce any unexpected behavior.
+o Documentation has been updated and improved, though more improvements
+and additions are pending.
+o Removed print STDERRs I'd accidentally left in the last commit.
+o Other miscellaneous and sundry bug fixes in anticipation of a 0.4.2
+release.
+
 Revision 1.1  2001/04/23 10:13:19  starky
 Commit in preparation for release 0.4.1.
 
@@ -677,6 +674,16 @@ a work-out-of-the-box system.
 Revision 1.6  =head1 CHANGE LOG
  
 $Log: Conf.pm,v $
+Revision 1.2  2001/05/07 02:39:19  starky
+A variety of bug fixes and enhancements:
+o Fixed bug 421729:  Now the --output flag should work as expected and the
+--logfile flag should not produce any unexpected behavior.
+o Documentation has been updated and improved, though more improvements
+and additions are pending.
+o Removed print STDERRs I'd accidentally left in the last commit.
+o Other miscellaneous and sundry bug fixes in anticipation of a 0.4.2
+release.
+
 Revision 1.1  2001/04/23 10:13:19  starky
 Commit in preparation for release 0.4.1.
 

@@ -4,6 +4,7 @@ require 5.005_62;
 use strict;
 use warnings;
 use Carp;
+use Data::Dumper;
 use File::Tail;
 use Net::Peep::Client;
 use Net::Peep::BC;
@@ -14,7 +15,7 @@ our @ISA = qw(Exporter Net::Peep::Client);
 our %EXPORT_TAGS = ( 'all' => [ qw( INTERVAL MAX_INTERVAL ADJUST_AFTER ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw( );
-our $VERSION = do { my @r = (q$Revision: 1.1 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+our $VERSION = do { my @r = (q$Revision: 1.4 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 # These are in seconds and are the parameters for File::Tail
 
@@ -93,10 +94,12 @@ sub Start {
 	my $self = shift;
 
 	my $events = '';
+	my $logfile = '';
+	my $pidfile = '/var/run/logparser.pid';
 
-	my %options = ( 'events=s' => \$events );
+	my %options = ( 'events=s' => \$events, 'logfile=s' => \$logfile, 'pidfile=s' => \$pidfile );
 
-	$self->parseopts(%options);
+	$self->parseopts(%options) || $self->pods();
 
 	$self->parseconf();
 
@@ -200,27 +203,38 @@ sub parse {
 
 	my $configuration = $self->getconf();
 
+	my $found = 0;
+
 	for my $event ($configuration->getClientEvents('logparser')) {
 
-		# FIXIT: Build the pecking object creation tomorrow (see the
-		# top of logparser)
+		# if we've already matched an event ignore the remaining events
 
-		my $name = $event->{'name'};
-		my $regex = $event->{'regex'};
+		unless ($found) {
 
-		$self->logger()->debug(9,"\tTrying to match regex [$regex] for event [$name]");
+			# FIXIT: Build the pecking object creation tomorrow (see the
+			# top of logparser)
 
-		if ($line =~ /$regex/) {
+			my $name = $event->{'name'};
+			my $regex = $event->{'regex'};
 
-			$self->logger()->debug(5,"$name:  $line");
+			$self->logger()->debug(9,"\tTrying to match regex [$regex] for event [$name]");
 
-			$self->peck()->send(
-				'type'       => 0,
-				'sound'      => $event->{'name'},
-				'location'   => $event->{'location'},
-				'priority'   => $event->{'priority'},
-				'volume'     => 255
-				);
+			if ($line =~ /$regex/) {
+
+				$self->logger()->debug(5,"$name:  $line");
+
+				$self->peck()->send(
+					'type'       => 0,
+					'sound'      => $event->{'name'},
+					'location'   => $event->{'location'},
+					'priority'   => $event->{'priority'},
+					'volume'     => 255
+					);
+
+				$found++;
+
+			}
+
 		}
 
 	}
@@ -240,8 +254,11 @@ generator for Peep.
 
 =head1 SYNOPSIS
 
+  require 5.005_62;
   use Net::Peep::Client::Logparser;
-  my $parser = new Net::Peep::Client::Logparser;
+  $logparser = new Net::Peep::Client::Logparser;
+  $SIG{'INT'} = $SIG{'TERM'} = sub { $logparser->shutdown(); exit 0; };
+  $logparser->Start();
 
 =head1 DESCRIPTION
 
@@ -273,22 +290,26 @@ Net::Peep::Client, logparser.
 
 http://peep.sourceforge.net
 
-=head1 TERMS AND CONDITIONS
-
-You should have received a file COPYING containing license terms
-along with this program; if not, write to Michael Gilfix
-(mgilfix@eecs.tufts.edu) for a copy.
-
-This version of Peep is open source; you can redistribute it and/or
-modify it under the terms listed in the file COPYING.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.    
-
 =head1 CHANGE LOG
 
 $Log: Logparser.pm,v $
+Revision 1.4  2001/05/07 02:39:19  starky
+A variety of bug fixes and enhancements:
+o Fixed bug 421729:  Now the --output flag should work as expected and the
+--logfile flag should not produce any unexpected behavior.
+o Documentation has been updated and improved, though more improvements
+and additions are pending.
+o Removed print STDERRs I'd accidentally left in the last commit.
+o Other miscellaneous and sundry bug fixes in anticipation of a 0.4.2
+release.
+
+Revision 1.3  2001/05/06 21:33:17  starky
+Bug 421248:  The --help flag should now work as expected.
+
+Revision 1.2  2001/05/05 19:25:53  starky
+Bug 421699:  Logparser now stops searching the regex list after the
+first match is found.
+
 Revision 1.1  2001/04/23 10:13:19  starky
 Commit in preparation for release 0.4.1.
 

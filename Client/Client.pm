@@ -19,7 +19,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = ( 'all' => [ qw( INTERVAL MAX_INTERVAL ADJUST_AFTER ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw( );
-our $VERSION = do { my @r = (q$Revision: 1.2 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+our $VERSION = do { my @r = (q$Revision: 1.4 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 # These are in seconds and are the parameters for File::Tail
 
@@ -142,7 +142,7 @@ sub parseopts {
 
 	# set the debug level first so we can start printing debugging
 	# messages
-	$Net::Peep::Log::logfile = $logfile if $logfile;
+	$Net::Peep::Log::logfile = $output if $output;
 	$Net::Peep::Log::debug = $debug if $debug;
 
 	my $found;
@@ -150,7 +150,7 @@ sub parseopts {
 	if (-f ${$allOptions{'config=s'}}) {
 		$found = ${$allOptions{'config=s'}};
 	} else {
-		for my $dir ('/usr/local/etc','/usr','/usr/local','/opt') {
+		for my $dir ('.','/usr/local/etc','/usr','/usr/local','/opt') {
 			if (-f "$dir/peep.conf") {
 				$found = "$dir/peep.conf";
 				last;
@@ -173,8 +173,8 @@ sub parseopts {
 	$conf->setOption('autodiscovery',${$allOptions{'autodiscovery!'}});
 	$conf->setOption('server',${$allOptions{'server=s'}}) if ${$allOptions{'server=s'}} ne '';
 	$conf->setOption('port',${$allOptions{'port=s'}}) if ${$allOptions{'port=s'}} ne '';
-	$conf->setOption('silent',${$allOptions{'silent=s'}});
-	$conf->setOption('help',${$allOptions{'help=s'}});
+	$conf->setOption('silent',${$allOptions{'silent'}});
+	$conf->setOption('help',${$allOptions{'help'}});
 
 	$self->setconf($conf);
 
@@ -308,17 +308,8 @@ subclasses for Peep: The Network Auralizer.
 
 =head1 SYNOPSIS
 
-  use Net::Peep::Client;
-  @INC = qw{ Net::Peep::Client };
-
-  sub new {
-
-      my $self = shift;
-      my $class = ref($self) || $self;
-      my $this = $class->SUPER::new();
-      bless $this, $class;
-
-  } # end sub new
+See the Net::Peep documentation for information about the usage of the
+Net::Peep::Client object.
 
 =head1 DESCRIPTION
 
@@ -328,7 +319,7 @@ creation of generic Peep clients.
 
 See the main Peep client documentation or
 
-  perldoc Peep
+  perldoc Net::Peep
 
 for more information on usage of this module.
 
@@ -386,6 +377,20 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 =head1 CHANGE LOG
 
 $Log: Client.pm,v $
+Revision 1.4  2001/05/07 02:39:19  starky
+A variety of bug fixes and enhancements:
+o Fixed bug 421729:  Now the --output flag should work as expected and the
+--logfile flag should not produce any unexpected behavior.
+o Documentation has been updated and improved, though more improvements
+and additions are pending.
+o Removed print STDERRs I'd accidentally left in the last commit.
+o Other miscellaneous and sundry bug fixes in anticipation of a 0.4.2
+release.
+
+Revision 1.3  2001/05/06 21:31:22  starky
+Bug 421248:  Fixed broken --help for client modules.  Also added the
+directory . to the list of directories searched to find peep.conf.
+
 Revision 1.2  2001/05/03 05:45:42  starky
 Bug 418680:  Clients no longer terminate with error when unable to open
 the pidfile in daemon mode.  Instead, a warning is logged.

@@ -14,7 +14,7 @@ our @EXPORT = qw( );
 
 use vars qw{ $debug $logfile $__LOGFILE $__LOGHANDLE };
 
-our $VERSION = do { my @r = (q$Revision: 1.1 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+our $VERSION = do { my @r = (q$Revision: 1.2 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 $debug = $__LOGFILE = 0;
 
@@ -144,14 +144,14 @@ This module is a part of Peep.
   $log->log("The method foo took ",$log->benchmark("foomark")," seconds.");
   $log->mark("barmark");
   $object->bar();
-  $log->log("The method bar took ",$log->benchmark("foomark")," seconds and ",
-            "foo and bar took a total of ",$log->benchmark("barmark"));
+  $log->log("The method bar took ",$log->benchmark("barmark")," seconds and ",
+            "foo and bar took a total of ",$log->benchmark("foomark"));
 
   $log->debug(1,"This message will be logged in ",
-                "/var/log/peep/client.log");
+                "/var/log/peep/client.log because the debug level is 3");
 
   $log->debug(4,"This message will not be logged in ",
-                "/var/log/peep/client.log");
+                "/var/log/peep/client.log because the debug level is 3");
 
 
 =head1 DESCRIPTION
@@ -159,24 +159,24 @@ This module is a part of Peep.
 Net::Peep::Log provides methods for writing logging and debugging messages.
 
 Messages are written to the file defined by the class attribute
-$Net::Peep::Log::logfile.  If the attribute is not defined, messages are
+C<$Net::Peep::Log::logfile>.  If the attribute is not defined, messages are
 written to standard error.
 
 All messages are prepended with a syslog-style time stamp.
 
 Debugging messages are accompanied with an argument specifying the
-debugging level of the message.  The class attribute $Net::Peep::Log::debug
+debugging level of the message.  The class attribute C<$Net::Peep::Log::debug>
 defines the cutoff level for debugging messages to appear in the log.
 
 If the debugging level of a particular debugging message is compared
 with the global debugging level.  If it is less than or equal to the
 global debugging level, it is logged.  Otherwise, it is discarded.
 
-The default value of $Net::Peep::Log::debug is 0.
+The default value of C<$Net::Peep::Log::debug> is 0.
 
 This provides the coder with the ability to specify how much debugging
 output to include in client output by simply setting the
-$Net::Peep::Log::debug level.
+C<$Net::Peep::Log::debug> level.
 
 Generally accepted categories associated with various debugging levels
 are as follows:
@@ -199,7 +199,8 @@ None by default.
 
 The following class attributes are optional:
 
-  $Net::Peep::Log::logfile
+  $Net::Peep::Log::logfile - See below.
+  will be written
   $Net::Peep::Log::debug - The debug level.  Default:  0.
 
 If no logfile is specified, log output is sent to STDOUT and debugging
@@ -241,22 +242,19 @@ sysmonitor.
 
 http://peep.sourceforge.net
 
-=head1 TERMS AND CONDITIONS
-
-You should have received a file COPYING containing license terms
-along with this program; if not, write to Michael Gilfix
-(mgilfix@eecs.tufts.edu) for a copy.
-
-This version of Peep is open source; you can redistribute it and/or
-modify it under the terms listed in the file COPYING.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
 =head1 CHANGE LOG
 
 $Log: Log.pm,v $
+Revision 1.2  2001/05/07 02:39:19  starky
+A variety of bug fixes and enhancements:
+o Fixed bug 421729:  Now the --output flag should work as expected and the
+--logfile flag should not produce any unexpected behavior.
+o Documentation has been updated and improved, though more improvements
+and additions are pending.
+o Removed print STDERRs I'd accidentally left in the last commit.
+o Other miscellaneous and sundry bug fixes in anticipation of a 0.4.2
+release.
+
 Revision 1.1  2001/04/23 10:13:19  starky
 Commit in preparation for release 0.4.1.
 
@@ -280,6 +278,16 @@ a work-out-of-the-box system.
 Revision 1.3  =head1 CHANGE LOG
  
 $Log: Log.pm,v $
+Revision 1.2  2001/05/07 02:39:19  starky
+A variety of bug fixes and enhancements:
+o Fixed bug 421729:  Now the --output flag should work as expected and the
+--logfile flag should not produce any unexpected behavior.
+o Documentation has been updated and improved, though more improvements
+and additions are pending.
+o Removed print STDERRs I'd accidentally left in the last commit.
+o Other miscellaneous and sundry bug fixes in anticipation of a 0.4.2
+release.
+
 Revision 1.1  2001/04/23 10:13:19  starky
 Commit in preparation for release 0.4.1.
 

@@ -3,7 +3,7 @@ use ExtUtils::MakeMaker;
 # the contents of the Makefile that is written.
 WriteMakefile(
     'NAME'		=> 'Net::Peep',
-    'VERSION'		=> '0.4.1', # VERSION_FROM seems to break 5.00503
+    'VERSION'		=> '0.4.1.1', # VERSION_FROM seems to break 5.00503
     'PREREQ_PM'		=> {}, # e.g., Module::Name => 1.1
     'PM'                => {
                             'Peep.pm' => '$(INST_LIB)/Net/Peep.pm',

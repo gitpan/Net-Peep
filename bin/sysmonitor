@@ -43,10 +43,9 @@ system supports the following command-line options:
 In addition, the following options are common to all Peep clients:
 
     --config=[PATH]       Path to the configuration file to use
-    --logfile=[PATH]      The path of the logfiles to scan, delimited by ','
     --debug=[NUMBER]      Enable debugging. (Def:  0)
     --nodaemon            Do not run in daemon mode
-    --pidfile=[PATH]      The file to write the pid out to (Def: /var/run/logparser.pid)
+    --pidfile=[PATH]      The file to write the pid out to (Def: /var/run/sysmonitor.pid)
     --output=[PATH]       The file to log logparser output to (Def: stderr)
     --noautodiscovery     Disables autodiscovery and enables the server and port options
     --server=[HOST]       The host (or IP address) to connect to
@@ -60,9 +59,11 @@ In addition, the following options are common to all Peep clients:
 
 sysmonitor
 
+sysmonitor --help
+
 sysmonitor --nodaemon --noautodiscovery --server=localhost --port=2001
 
-sysmonitor --nodaemon --debug=7 --config=$HOME/peep.conf
+sysmonitor --nodaemon --config=$HOME/peep.conf --debug=9 
 
 =head1 AUTHOR
 

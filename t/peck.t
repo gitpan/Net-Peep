@@ -49,7 +49,7 @@ eop
 } # end unless $ENV{'AUTOMATED_BUILD'}
 
 eval {
-	@ARGV = ( '--type=0','--sound=0','--server=localhost','--port=2001','--volume=255');
+	@ARGV = ( '--type=0','--sound=0','--server=localhost','--port=2001','--volume=255','--config=./peep.conf');
 	$pecker->peck();
 };
 

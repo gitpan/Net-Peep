@@ -15,7 +15,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw( );
-our $VERSION = do { my @r = (q$Revision: 1.1 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+our $VERSION = do { my @r = (q$Revision: 1.2 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 use constant PROT_MAJORVER => 1;
 use constant PROT_MINORVER => 0;
@@ -53,7 +53,7 @@ sub peck {
 		'autodiscovery!' => \$autodiscovery, # override Net::Peep::Client's default
 		);
 
-	$client->parseopts(%options);
+	$client->parseopts(%options) || $client->pods();
 
 	$client->parseconf();
 
@@ -185,6 +185,9 @@ perl(1), Net::Peep::BC, peck.
 =head1 CHANGE LOG
 
 $Log: Peck.pm,v $
+Revision 1.2  2001/05/06 21:33:17  starky
+Bug 421248:  The --help flag should now work as expected.
+
 Revision 1.1  2001/04/23 10:13:20  starky
 Commit in preparation for release 0.4.1.
 

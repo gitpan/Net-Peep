@@ -36,8 +36,11 @@ logparser supports the following command-line options:
 
     --events=[STRING]     The string of events to scan for. For more information,
                           consult the Peep configuration file documentation
-    --config=[PATH]       Path to the configuration file to use
     --logfile=[PATH]      The path of the logfiles to scan, delimited by ','
+
+In addition, the following options are common to all Peep clients:
+
+    --config=[PATH]       Path to the configuration file to use
     --debug=[NUMBER]      Enable debugging. (Def:  0)
     --nodaemon            Do not run in daemon mode
     --pidfile=[PATH]      The file to write the pid out to (Def: /var/run/logparser.pid)
@@ -54,11 +57,15 @@ logparser supports the following command-line options:
 
   logparser 
 
+  logparser --help
+
   logparser --nodaemon --noautodiscovery --server=localhost --port=2000
 
-  logparser --logfile=/usr/local/etc/peep.conf --debug=9
+  logparser --config=/usr/local/etc/peep.conf --debug=9
 
-  logparser --debug=7 --output=/var/log/peepd/logparser.log
+  logparser --logfile=/var/log/messages --debug=9
+
+  logparser --output=/var/log/peepd/logparser.log --debug=7 
 
 =head1 AUTHOR
 
@@ -66,7 +73,7 @@ Michael Gilfix <mgilfix@eecs.tufts.edu> Copyright (C) 2000
 
 =head1 SEE ALSO
 
-perl(1), peepd(1), Net::Peep::Client::Log, peepd.
+perl(1), peepd(1), Net::Peep::Client::Logparser, peepd.
 
 http://peep.sourceforge.net
 

@@ -12,7 +12,7 @@ our @ISA = qw( Exporter Net::Peep::Client );
 our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw( );
-our $VERSION = do { my @r = (q$Revision: 1.1 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+our $VERSION = do { my @r = (q$Revision: 1.3 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 use constant DEFAULT_PID_FILE => "/var/run/sysmonitor.pid";
 
@@ -38,6 +38,7 @@ sub Start {
 	my $sleep = 60;
 	my $maxload = 2.0;
 	my $maxusers = 5;
+	my $pidfile = '/var/run/sysmonitor.pid';
 
 	my %options = (
 		'loadsound=s' => \$loadsound,       # the load sound
@@ -47,11 +48,12 @@ sub Start {
 		'sleep=s' => \$sleep,               # sleep time
 		'maxload=s' => \$maxload,           # What to consider a high load
 		'maxusers=s' => \$maxusers,         # What to consider a high number of users
+		'pidfile=s' => \$pidfile,           # Path to write the pid out to
 	);
 
 	# let the client know what command-line options to expect
 	# and ask the client to parse the command-line
-	$self->parseopts(%options);
+	$self->parseopts(%options) || $self->pods();
 
 	# have the client parse the configuration file
 	$self->parseconf();
@@ -141,12 +143,16 @@ __END__
 
 =head1 NAME
 
-Net::Peep::Client::System - Perl extension for a client to monitor system statistics.
+Net::Peep::Client::Sysmonitor - Perl extension for a client to monitor
+system statistics.
 
 =head1 SYNOPSIS
 
-  use Net::Peep::Client::System;
-  my $system = new Net::Peep::Client::System;
+  require 5.005_62;
+  use Net::Peep::Client::Sysmonitor;
+  $sysmonitor = new Net::Peep::Client::Sysmonitor;
+  $SIG{'INT'} = $SIG{'TERM'} = sub { $sysmonitor->shutdown(); exit 0; };
+  $sysmonitor->Start();
 
 =head1 DESCRIPTION
 
@@ -197,6 +203,19 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 =head1 CHANGE LOG
 
 $Log: Sysmonitor.pm,v $
+Revision 1.3  2001/05/07 02:39:19  starky
+A variety of bug fixes and enhancements:
+o Fixed bug 421729:  Now the --output flag should work as expected and the
+--logfile flag should not produce any unexpected behavior.
+o Documentation has been updated and improved, though more improvements
+and additions are pending.
+o Removed print STDERRs I'd accidentally left in the last commit.
+o Other miscellaneous and sundry bug fixes in anticipation of a 0.4.2
+release.
+
+Revision 1.2  2001/05/06 21:33:17  starky
+Bug 421248:  The --help flag should now work as expected.
+
 Revision 1.1  2001/04/23 10:13:19  starky
 Commit in preparation for release 0.4.1.
 

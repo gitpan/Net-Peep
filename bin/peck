@@ -14,11 +14,11 @@ peck - Ad-hoc sound generator for Peep:  The Network Auralizer.
 
 =head1 USAGE
 
-  peck --server=$SERVER --port=$PORT [OPTIONS]
+  peck --server=SERVER --port=PORT [OPTIONS]
 
-=head1 COMMAND-LINE ARGUMENTS
+=head1 OPTIONS
 
-Command-line arguments processed by peck include:
+peck supports the following command-line options:
 
     --type      The type of sound to produce (e.g., event=0, state=1)
     --sound     The name or number of the sound to produce
@@ -26,14 +26,18 @@ Command-line arguments processed by peck include:
     --volume    The volume of the sound
     --priority  A priority for producing the sound
     --dither    The dither
+
+In addition, the following options are common to all Peep clients:
+
     --port      The port to which the event will be directed
     --server    The server to which the event will be directed
     --debug     The debugging level (Def:  0)
-    --logfile   The file to send log output (Def:  STDOUT)
-    --help      Prints whatever PODs are found in the calling 
-                application
+    --output    The file to send log output (Def:  stderr)
+    --help      Prints a simple help message
 
 =head1 EXAMPLES
+
+  peck --help
 
   peck --server=localhost --port=2001 --type=0 --sound=1
 
@@ -53,5 +57,7 @@ Collin Starkweather <collin.starkweather@collinstarkweather.com>
 =head1 SEE ALSO
 
 perl(1), Net::Peep::Peck
+
+http://peep.sourceforge.net
 
 =cut

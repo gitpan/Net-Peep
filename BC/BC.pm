@@ -11,7 +11,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw( );
-our $VERSION = do { my @r = (q$Revision: 1.1 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+our $VERSION = do { my @r = (q$Revision: 1.3 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 use Socket;
 use Sys::Hostname;
@@ -106,6 +106,23 @@ sub initialize {
 	#Set the socket option for the broadcast
 	setsockopt SOCKET, SOL_SOCKET, SO_BROADCAST | SO_REUSEADDR, 1;
 
+	#Let everyone know we're alive
+	$self->hello();
+
+	#Start up the alarm. Once this handler gets started, we'll have it
+	#work concurrently with the program to handle host lists
+	if ($configuration->getOption('autodiscovery')) {
+		$SIG{'ALRM'} = sub { $self->handlealarm() };
+		alarm($Alarmtime);
+	}
+
+} # end sub initialize
+
+sub hello {
+
+	my $self = shift;
+	my $configuration = $self->getConfiguration() || confess "Error:  Configuration not found";
+
 	# Send out our broadcast to let everybody know we're alive
 	# Note - we want to send these broadcasts to the servers within
 	# the class definition. So, we use getServer() - Mike
@@ -127,14 +144,7 @@ sub initialize {
 		}
 	}
 
-	#Start up the alarm. Once this handler gets started, we'll have it
-	#work concurrently with the program to handle host lists
-	if ($configuration->getOption('autodiscovery')) {
-		$SIG{'ALRM'} = sub { $self->handlealarm() };
-		alarm($Alarmtime);
-	}
-
-} # end sub initialize
+} # end sub hello
 
 sub getConfiguration {
 
@@ -309,8 +319,20 @@ sub handlealarm {
 	#carry on with out business
 	my $self = shift;
 
+	$self->hello();
 	$self->updateserverlist();
 	$self->purgeserverlist();
+
+	if (scalar(keys %Servers)) {
+		$self->logger()->debug(9,"Known servers:");
+		for my $server (sort keys %Servers) {
+			my ($serverport,$serverip) = unpack_sockaddr_in($server);
+			$serverip = inet_ntoa($serverip);
+			$self->logger()->debug(9,"\t[$serverip:$serverport]");
+		}
+	} else {
+		$self->logger()->debug(9,"There are currently no known servers.");
+	}
 
 	$SIG{'ALRM'} = sub { $self->handlealarm() };
 	alarm($Alarmtime); 
@@ -365,7 +387,7 @@ sub purgeserverlist {
 	for my $server (keys %Servers) {
 		if ($Servers{$server}->{'expires'} <= time()) {
 			delete $Servers{$server};
-			$self->logger()->debug(7,"\tServer purged. Number of known servers: " . scalar (keys %Net::Peep::Servers));
+			$self->logger()->debug(7,"\tServer purged. Number of known servers: " . scalar (keys %Servers));
 
 			for my $known (keys %Net::Peep::Servers) {
 				my ($serverport,$serverip) = unpack_sockaddr_in($server);
@@ -408,13 +430,10 @@ sub addnewserver {
 
 	foreach my $class ($configuration->getClassList()) {
 		my $str = quotemeta($class.$delim);
-		#       the below is a kludge of the above to get it to work with my
-		#       humble conf file - gotta figure this out at some point
-		#	my $str = quotemeta($class);
-		$self->logger()->debug(7,"\tChecking server id [$realid] against class descriptor [$str] ....");
+		$self->logger()->debug(7,"\tChecking server id [$realid] against class descriptor [$class$delim] ....");
 
 		if ($realid =~ /$str/) {
-			$self->logger()->debug(7,"\tAdding server [$serverip:$serverport] to the server list.");
+			$self->logger()->debug(7,"\tMatch found:  Adding server [$serverip:$serverport] to the server list.");
 			$self->addserver($server, $min, $sec);
 		} else {
 			$self->logger()->debug(7,"\tNo match found.  Nothing added to server list.");
@@ -518,9 +537,14 @@ None by default.
 
 =head2 CLASS ATTRIBUTES
 
-  %Leases
+  %Leases - Deprecated
 
-  %Servers
+  %Servers - A hash the keys of which are the servers found by
+  autodiscovery methods (i.e., methods in which clients and servers
+  notify each other of their existence) and the values of which are
+  anonymous hashes containing information about the server, including
+  an expiration time after which if the client has not heard from the
+  server, the server is deleted from the %Servers hash.
 
   %Defaults - Default values for options such as 'priority', 'volume',
   'dither', 'sound'.
@@ -534,11 +558,13 @@ None by default.
 Note that this section is somewhat incomplete.  More
 documentation will come soon.
 
-    new(%options) - Net::Peep::BC constructor.  If an option is not
-    specified in the %options argument, the equivalent value in the
-    %Defaults class attributes is used.
+    new($client,$conf,%options) - Net::Peep::BC constructor.  $client
+    is the name of the client; e.g., 'logparser' or 'sysmonitor' and
+    $conf is a Net::Peep::Conf object.  If an option is not specified
+    in the %options argument, the equivalent value in the %Defaults
+    class attributes is used.
 
-    assemble_bc_packet() - Assembles the BC packet.  Duh.
+    assemble_bc_packet() - Assembles the broadcast packet.  Duh.
 
     logger() - Returns a Net::Peep::Log object used for log messages and
     debugging output.
@@ -589,6 +615,8 @@ documentation will come soon.
 
 Michael Gilfix <mgilfix@eecs.tufts.edu> Copyright (C) 2000
 
+Collin Starkweather <collin.starkweather@colorado.edu> Copyright (C) 2000
+
 =head1 SEE ALSO
 
 perl(1), peepd(1), Net::Peep::Dumb, Net::Peep::Log, Net::Peep::Parse, Net::Peep::Log.
@@ -611,6 +639,21 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 =head1 CHANGE LOG
 
 $Log: BC.pm,v $
+Revision 1.3  2001/05/07 02:39:19  starky
+A variety of bug fixes and enhancements:
+o Fixed bug 421729:  Now the --output flag should work as expected and the
+--logfile flag should not produce any unexpected behavior.
+o Documentation has been updated and improved, though more improvements
+and additions are pending.
+o Removed print STDERRs I'd accidentally left in the last commit.
+o Other miscellaneous and sundry bug fixes in anticipation of a 0.4.2
+release.
+
+Revision 1.2  2001/05/06 08:03:01  starky
+Bug 421791:  Clients and servers tend to forget about each other in
+autodiscovery mode after a few hours.  The client now sends out a
+"hello" packet each time it goes through a server update/purge cycle.
+
 Revision 1.1  2001/04/23 10:13:19  starky
 Commit in preparation for release 0.4.1.
 
