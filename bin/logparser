@@ -71,6 +71,8 @@ In addition, the following options are common to all Peep clients:
 
 Michael Gilfix <mgilfix@eecs.tufts.edu> Copyright (C) 2000
 
+Collin Starkweather <collin.starkweather@colorado.edu>
+
 =head1 SEE ALSO
 
 perl(1), peepd(1), Net::Peep::Client::Logparser, peepd.

@@ -17,7 +17,7 @@ use vars qw{ @ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION };
 %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 @EXPORT = qw( );
-$VERSION = do { my @r = (q$Revision$ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+$VERSION = do { my @r = (q$Revision: 1.4 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 use constant PROT_MAJORVER => 1;
 use constant PROT_MINORVER => 0;
@@ -30,7 +30,7 @@ sub new {
 	my $class = ref($self) || $self;
 	my $this = {};
 	bless $this, $class;
-	return $this;
+	$this;
 
 } # end sub new
 
@@ -38,12 +38,11 @@ sub peck {
 
 	my $self = shift;
 
-	my $client = new Net::Peep::Client ('peck');
+	my $client = new Net::Peep::Client;
+	$client->name('peck');
 
 	my ($type,$sound,$location,$volume,$priority,$dither,$autodiscovery)
 		= (0,0,0,255,128,255,0);
-
-	$client->logger()->debug(9,"Autodiscovery before the call to parseopts is [$autodiscovery].");
 
 	my %options = ( 
 		'type=s' => \$type,
@@ -55,11 +54,11 @@ sub peck {
 		'autodiscovery!' => \$autodiscovery, # override Net::Peep::Client's default
 		);
 
-	$client->parseopts(%options) || $client->pods();
+	$client->initialize(%options) || $client->pods();
 
-	$client->parseconf();
+	$client->parser( sub { } );
 
-	my $conf = $client->getconf();
+	my $conf = $client->configure();
 
 	if ($conf->getOption('autodiscovery')) {
 		die "Error:  Autodiscovery is not supported by the peck client.";
@@ -72,6 +71,7 @@ sub peck {
 	my $broadcast = new Net::Peep::BC ('peck',$conf);
 
 	$broadcast->send(
+		'peck',
 		type => $type,
 		location => $location,
 		priority => $priority,
@@ -95,9 +95,10 @@ sub logger {
 
 sub pecker {
 
-	my $self = shift;
-	$self->{"__PECKER"} = Net::Peep::BC->new() unless exists $self->{"__PECKER"};
-	return $self->{"__PECKER"};
+    # tee hee
+    my $self = shift;
+    $self->{"__PECKER"} = Net::Peep::BC->new() unless exists $self->{"__PECKER"};
+    return $self->{"__PECKER"};
 
 } # end sub pecker
 
@@ -187,6 +188,22 @@ perl(1), Net::Peep::BC, peck.
 =head1 CHANGE LOG
 
 $Log: Peck.pm,v $
+Revision 1.4  2001/09/23 08:53:57  starky
+The initial checkin of the 0.4.4 release candidate 1 clients.  The release
+includes (but is not limited to):
+o A new client:  pinger
+o A greatly expanded sysmonitor client
+o An API for creating custom clients
+o Extensive documentation on creating custom clients
+o Improved configuration file format
+o E-mail notifications
+Contact Collin at collin.starkweather@colorado with any questions.
+
+Revision 1.3  2001/08/08 20:17:57  starky
+Check in of code for the 0.4.3 client release.  Includes modifications
+to allow for backwards-compatibility to Perl 5.00503 and a critical
+bug fix to the 0.4.2 version of Net::Peep::Conf.
+
 Revision 1.2  2001/05/06 21:33:17  starky
 Bug 421248:  The --help flag should now work as expected.
 

@@ -13,7 +13,7 @@ use vars qw{ @ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION };
 %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 @EXPORT = qw( );
-$VERSION = do { my @r = (q$Revision: 1.7 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+$VERSION = do { my @r = (q$Revision: 1.10 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 use Socket;
 use Sys::Hostname;
@@ -72,7 +72,7 @@ sub initialize {
 	# methods can find it
 	$self->setConfiguration($configuration);
 
-	my %options = $configuration->getOptionsHash();
+	my %options = $configuration->getOptionsHash($client);
 
 	# FIXIT: This is silly and redundant.  The object that instantiates
 	# the Net::Peep::BC object already has all of the options set and a
@@ -103,7 +103,7 @@ sub initialize {
 	my $proto = getprotobyname('udp');
 	my $paddr = sockaddr_in($port, $addr);
 	socket(SOCKET, PF_INET, SOCK_DGRAM, $proto) or confess "Socket error: $!";
-	if ($configuration->getOption('autodiscovery')) {
+	if ($configuration->getOption($client,'autodiscovery')) {
 		bind(SOCKET, $paddr)                        or confess "Bind error: $!";
 	}
 	$self->logger()->debug(7,"\tSocket initialized.");
@@ -116,9 +116,9 @@ sub initialize {
 
 	#Start up the alarm. Once this handler gets started, we'll have it
 	#work concurrently with the program to handle host lists
-	if ($configuration->getOption('autodiscovery')) {
+	if ($configuration->getOption($client,'autodiscovery')) {
 		$Scheduler->schedulerAddEvent(
-			$self->getConfiguration()->getApp(),
+			$self->getConfiguration()->client(),
 			$Alarmtime,
 			0.0,
 			'client',
@@ -140,24 +140,27 @@ sub hello {
 	# Note - we want to send these broadcasts to the servers within
 	# the class definition. So, we use getServer() - Mike
 	for my $class ($configuration->getClassList()) {
-		$self->logger()->debug(9,"Getting broadcast for class [$class]");
+		$self->logger()->debug(7,"Getting broadcast for class [$class]");
 		my $broadcasts = $configuration->getServer($class);
 
 		for my $broadcast (@$broadcasts) {
 			my ($zone, $port) = ($broadcast->{'name'}, $broadcast->{'port'});
-			$self->logger()->debug(9,"Socketing to zone [$zone] and port [$port] ...");
+			$self->logger()->debug(7,"Socketing to zone [$zone] and port [$port] ...");
 			my $iaddr = inet_aton($zone);
 			my $bcaddr = sockaddr_in($port, $iaddr);
 
 			#Assemble the packet and send it
 			my $packet = $self->assemble_bc_packet($constant);
 			if (defined($constant) && $constant == PROT_CLIENTSTILLALIVE) {
-				$self->logger()->debug(9,"Letting [$zone:$port] know we're still alive ...");
+				$self->logger()->debug(7,"Letting [$zone:$port] know we're still alive ...");
 			} else {
-				$self->logger()->debug(9,"Sending a friendly hello to address [$zone:$port] ...");
+				$self->logger()->debug(7,"Sending a friendly hello to address [$zone:$port] ...");
 			}
-			defined(send(SOCKET, $packet, 0, $bcaddr)) or confess "Send broadcast error: $!";
-			$self->logger()->debug(9,"\tPacket of length ".length($packet)." sent.");
+			if (defined(send(SOCKET, $packet, 0, $bcaddr))) {
+				$self->logger()->debug(9,"\tPacket of length ".length($packet)." sent.");
+			} else {
+				$self->logger()->log("Send broadcast error: $!");
+			}
 		}
 	}
 
@@ -222,6 +225,7 @@ sub close {
 sub send {
 
 	my $self = shift;
+	my $client = shift;
 	my %options = @_;
 
 	$self->logger()->debug(7,"Sending packet to server(s) ...");
@@ -253,7 +257,7 @@ sub send {
 		}
 	}
 
-	if ($configuration->getOption('autodiscovery')) {
+	if ($configuration->getOption($client,'autodiscovery')) {
 
 		# Now sendout to all the servers in our server list
 		for my $server (keys %Servers) {
@@ -266,8 +270,8 @@ sub send {
 	} else {
 
 		# Just send a packet to the server and port specified on the command-line
-		my $port = $configuration->getOption('port') || confess "Error:  Expecting nonzero port!";
-		my $host = $configuration->getOption('server') || confess "Error:  Expecting nonzero host!";
+		my $port = $configuration->getOption($client,'port') || confess "Error:  Expecting nonzero port!";
+		my $host = $configuration->getOption($client,'server') || confess "Error:  Expecting nonzero host!";
 		$self->logger()->debug(7,"Notifying server [$host:$port] of event or sound [$sound] ...");
 		$host = inet_aton($host);
 		my $server = sockaddr_in($port,$host);
@@ -656,6 +660,27 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 =head1 CHANGE LOG
 
 $Log: BC.pm,v $
+Revision 1.10  2001/10/01 05:20:05  starky
+Hopefully the final commit before release 0.4.4.  Tied up some minor
+issues, did some beautification of the log messages, added some comments,
+and made other minor changes.
+
+Revision 1.9  2001/09/23 08:53:49  starky
+The initial checkin of the 0.4.4 release candidate 1 clients.  The release
+includes (but is not limited to):
+o A new client:  pinger
+o A greatly expanded sysmonitor client
+o An API for creating custom clients
+o Extensive documentation on creating custom clients
+o Improved configuration file format
+o E-mail notifications
+Contact Collin at collin.starkweather@colorado with any questions.
+
+Revision 1.8  2001/08/08 20:17:57  starky
+Check in of code for the 0.4.3 client release.  Includes modifications
+to allow for backwards-compatibility to Perl 5.00503 and a critical
+bug fix to the 0.4.2 version of Net::Peep::Conf.
+
 Revision 1.7  2001/07/23 17:46:29  starky
 Added versioning to the configuration file as well as the ability to
 specify groups in addition to / as a replacement for event letters.

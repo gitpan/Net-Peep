@@ -6,8 +6,12 @@ use strict;
 use Carp;
 use Data::Dumper;
 use File::Tail;
+use Sys::Hostname;
 use Net::Peep::Client;
+use Net::Peep::Client::Logparser::Event;
 use Net::Peep::BC;
+use Net::Peep::Notifier;
+use Net::Peep::Notification;
 
 require Exporter;
 
@@ -17,7 +21,7 @@ use vars qw{ @ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION };
 %EXPORT_TAGS = ( 'all' => [ qw( INTERVAL MAX_INTERVAL ADJUST_AFTER ) ] );
 @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 @EXPORT = qw( );
-$VERSION = do { my @r = (q$Revision$ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+$VERSION = do { my @r = (q$Revision: 1.10 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 # These are in seconds and are the parameters for File::Tail
 
@@ -40,15 +44,19 @@ sub new {
 
 	my $self = shift;
 	my $class = ref($self) || $self;
-	my $this = $class->SUPER::new('logparser');
+	my $this = $class->SUPER::new();
 	bless $this, $class;
+	$this->{'EVENTS'} = [];
+	$this->name('logparser');
+	$this;
 
 } # end sub new
 
 sub getLogFiles {
 
 	my $self = shift;
-	my $logfiles = $self->getconf()->getOption('logfile');
+	my $conf = $self->conf();
+	my $logfiles = $conf->optionExists('logfile') ? $conf->getOption('logfile') : '';
 	my @logfiles = split ',\s*', $logfiles;
 	return wantarray ? @logfiles : [@logfiles];
 
@@ -108,11 +116,18 @@ sub Start {
 		'groups=s' => \@groups,
 		'exclude=s' => \@exclude );
 
-	$self->parseopts(%options) || $self->pods();
+	$self->initialize(%options) || $self->pods();
 
-	$self->parseconf();
+	# register a parser for the logparser section of the configuration file
 
-	my $conf = $self->getconf();
+	$self->logger()->debug(9,"Registering parser ...");
+	$self->parser(sub { my @text = @_; $self->parse(@text); });
+	$self->logger()->debug(9,"\tParser registered ...");
+
+	# have the client parse the configuration file and 
+	# get the configuration object which should be populated with the
+	# standard command-line options and configuration information
+	my $conf = $self->configure();
 
 	unless ($conf->getOption('autodiscovery')) {
 		$self->pods("Error:  Without autodiscovery you must provide a server and port option.")
@@ -120,20 +135,11 @@ sub Start {
 			       $conf->getOption('server') && $conf->getOption('port');
 	}
 
-	# convert the group and exclude strings to array refs
-	if (scalar(@groups)) {
-	    @groups = split /,/, join ',', @groups;
-	    map {s/\s+//g} @groups;
-	    $conf->setOption('groups',\@groups);
-	}
-	if (scalar(@exclude)) {
-	    @exclude = split /,/, join ',', @exclude;
-	    map {s/\s+//g} @exclude;
-	    $conf->setOption('exclude',\@exclude);
-	}
-	$self->logger()->debug(1,"After parsing command-line options, ");
-	$self->logger()->debug(1,"\tRecognized event groups are [@groups]");
-	$self->logger()->debug(1,"\tExcluded event groups are [@exclude]");
+	my @gotgroups = $self->getGroups();
+	my @gotexclude = $self->getExcluded();
+	$self->logger()->debug(1,"Recognized event groups are [@gotgroups]");
+	$self->logger()->debug(1,"Excluded event groups are [@gotexclude]");
+
 	# Check whether the pidfile option was set. If not, use the default
 	unless ($conf->optionExists('pidfile')) {
 		$self->logger()->debug(3,"No pid file specified. Using default [" . DEFAULT_PID_FILE . "]");
@@ -146,10 +152,9 @@ sub Start {
 		$self->logger()->log("\t$logfile");
 	}
 
+	# Register a callback for the main loop
 	$self->logger()->debug(9,"Registering callback ...");
-
 	$self->callback(sub { $self->loop(); });
-
 	$self->logger()->debug(9,"\tCallback registered ...");
 
 	$self->MainLoop();
@@ -186,7 +191,7 @@ sub loop {
 		}
 
 		for my $filetail (@logFileTails) {
-			$self->parse($filetail->read) unless $filetail->predict;
+			$self->tail($filetail->read) unless $filetail->predict;
 		}
 	}
 
@@ -198,11 +203,11 @@ sub peck {
 
 	my $self = shift;
 
-	my $configuration = $self->getconf();
+	my $configuration = $self->conf();
 
 	unless (exists $self->{"__PEEP"}) {
 		if ($configuration->getOptions()) {
-			$self->{"__PEEP"} = Net::Peep::BC->new( 'logparser', $configuration );
+			$self->{"__PEEP"} = Net::Peep::BC->new( $self->name(), $configuration );
 		} else {
 			confess "Error:  Expecting options to have been parsed by now.";
 		}
@@ -212,57 +217,201 @@ sub peck {
 
 } # end sub peck
 
+sub tail {
+
+    my $self = shift;
+    my $line = shift;
+    
+    chomp $line;
+    
+    $self->logger()->debug(9,"Checking [$line] ...");
+    
+    my $conf = $self->conf();
+    
+    my $found = 0;
+    
+    # filter the events based on which groups or option letters
+    # are specified
+    my @events = grep $self->filter($_), $self->events();
+    
+    for my $event (@events) {
+	
+	# if we've already matched an event ignore the remaining events
+	
+	unless ($found) {
+	    
+	    my $name = $event->name();
+	    my $location = $event->location();
+	    my $priority = $event->priority();
+	    my $status = $event->notification();
+	    my $regex = $event->regex();
+	    
+	    $self->logger()->debug(9,"\tTrying to match regex [$regex] for event [$name]");
+	    
+	    if ($line =~ /$regex/) {
+		
+		$self->logger()->debug(5,"$name:  $line");
+		
+		$self->peck()->send(
+				    'logparser',
+				    'type'       => 0,
+				    'sound'      => $name,
+				    'location'   => $location,
+				    'priority'   => $priority,
+				    'volume'     => 255
+				    );
+		
+		my $notifier = new Net::Peep::Notifier;
+		my $notification = new Net::Peep::Notification;
+		
+		$notification->client($self->name());
+		$notification->hostname($Net::Peep::Notifier::HOSTNAME);
+		$notification->status($status);
+		$notification->datetime(time());
+		$notification->message("${Net::Peep::Notifier::HOSTNAME}:  $name:  $line");
+		
+		$notifier->notify($notification);
+		
+		$found++;
+		
+	    }
+	}
+    }
+    
+    return 1;
+
+} # end sub tail
+
+sub event {
+
+    # add an event to an array of events
+
+    my $self = shift;
+    my $event = shift || confess "event not found";
+    push @{$self->{'EVENTS'}}, $event;
+
+} # event
+
+sub events {
+
+    # return an array of events identified by calls to the event
+    # method
+
+    my $self = shift;
+    my $event = shift || confess "event not found";
+    return wantarray ? @{$self->{'EVENTS'}} : $self->{'EVENTS'};
+
+} # events
+
 sub parse {
 
-	my $self = shift;
-	my $line = shift;
+    my $self = shift;
+    my $client = $self->name() || confess "Cannot parse logparser events:  Client name attribute not set.";
+    my @text = @_;
 
-	chomp $line;
+    my $conf = $self->conf() || confess "Cannot parse logparser events:  Configuration object not found.";
 
-	$self->logger()->debug(9,"Checking [$line] ...");
+    $self->logger()->debug(1,"\t\tParsing events for client [$client] ...");
 
-	my $configuration = $self->getconf();
+    $self->tempParseDefaults(@text);
 
-	my $found = 0;
+    my @events = $self->getConfigSection('events',@text);
 
-	for my $event (grep $configuration->checkClientEvent($_), $configuration->getClientEvents('logparser')) {
+    my @version = $self->conf()->versionExists() 
+	? split /\./, $self->conf()->getVersion()
+	    : ();
 
-		# if we've already matched an event ignore the remaining events
+    if (@version && $version[0] >= 0 && $version[1] >= 4 && $version[2] > 3) {
 
-		# FIXIT: Note to self: Tomorrow modify this so only
-		# groups identified or letters identified actually
-		# initiate a parse and regex match
+	while (my $line = shift @events) {
+	    next if $line =~ /^\s*#/ || $line =~ /^\s*$/;
 
-		unless ($found) {
+	    my $name;
+	    if ($line =~ /^\s*([\w-]+)\s+([\w-]+)\s+(\d+)\s+(\d+)\s+(\w+)\s+"(.*)"\s+([\w\-\.]+)/) {
 
-			my $name = $event->{'name'};
-			my $regex = $event->{'regex'};
+		my $event = new Net::Peep::Client::Logparser::Event;
+		$event->name($1);
+		$event->group($2);
+		$event->location($3);
+		$event->priority($4);
+		$event->notification($5);
+		$event->regex($6);
+		$event->hosts($7);
+	    
+		$self->addEvent($event);
+		$self->logger()->debug(1,"\t\t\tClient event [$1] added.");
 
-			$self->logger()->debug(9,"\tTrying to match regex [$regex] for event [$name]");
-
-			if ($line =~ /$regex/) {
-
-				$self->logger()->debug(5,"$name:  $line");
-
-				$self->peck()->send(
-					'type'       => 0,
-					'sound'      => $event->{'name'},
-					'location'   => $event->{'location'},
-					'priority'   => $event->{'priority'},
-					'volume'     => 255
-					);
-
-				$found++;
-
-			}
-
-		}
+	    }
 
 	}
 
-	return 1;
+    } elsif (@version && $version[0] >= 0 && $version[1] >= 4 && $version[2] > 1) {
+
+	while (my $line = shift @events) {
+	    next if $line =~ /^\s*#/ || $line =~ /^\s*$/;
+
+	    my $name;
+	    if ($line =~ /^\s*([\w-]+)\s+([\w-]+)\s+([a-zA-Z])\s+(\d+)\s+(\d+)\s+"(.*)"/) {
+
+		my $event = new Net::Peep::Client::Logparser::Event;
+		$event->name($1);
+		$event->group($2);
+		$event->letter($3);
+		$event->location($4);
+		$event->priority($5);
+		$event->regex($7);
+	    
+		$self->addEvent($event);
+		$self->logger()->debug(1,"\t\t\tClient event [$1] added.");
+
+	    }
+
+	}
+
+    } else {
+
+	while (my $line = shift @events) {
+	    next if $line =~ /^\s*#/ || $line =~ /^\s*$/;
+	    
+	    my $name;
+	    if ($line =~ /([\w-]+)\s+([a-zA-Z])\s+(\d+)\s+(\d+)\s+"(.*)"/) {
+
+		my $event = new Net::Peep::Client::Logparser::Event;
+		$event->name($1);
+		$event->letter($3);
+		$event->location($4);
+		$event->priority($5);
+		$event->regex($7);
+	    
+		$self->addEvent($event);
+		$self->logger()->debug(1,"\t\t\tClient event [$1] added.");
+
+	    }
+
+	}
+
+    }
+
+    return @text;
 
 } # end sub parse
+
+sub addEvent {
+
+    my $self = shift;
+    my $event = shift || confess "Cannot add logparser event:  No event was provided.";
+    push @{$self->{'EVENTS'}}, $event;
+    return 1;
+
+} # end sub addEvent
+
+sub events {
+
+    # returns the list of events built with the addEvent method
+    my $self = shift;
+    return wantarray ? @{$self->{'EVENTS'}} : $self->{'EVENTS'};
+
+} # end sub events
 
 1;
 
@@ -293,12 +442,25 @@ None by default.
 =head1 METHODS
 
 Note that this section is somewhat incomplete.  More
-documentation will come soon.
+documentation will come later.
 
     new() - The constructor
 
     Start() - Begins tailing log files and signaling events.
     Terminates by entering the Net::Peep::Client->MainLoop() method.
+
+    loop() - The callback called by the Net::Peep::Client->MainLoop()
+    method.  See Net::Peep::Client for more information.
+
+    parse(@text) - Callback given to the Net::Peep::Client->parser() method
+    which parses the logparser client config section of the Peep
+    configuration file.
+
+    addEvent($event) - Adds a Net::Peep::Client::Logparser::Event
+    object to an array.
+
+    events() - Retrieves an array of
+    Net::Peep::Client::Logparser::Event objects added by the addEvent method.
 
 =head1 AUTHOR
 
@@ -316,6 +478,27 @@ http://peep.sourceforge.net
 =head1 CHANGE LOG
 
 $Log: Logparser.pm,v $
+Revision 1.10  2001/10/01 05:20:05  starky
+Hopefully the final commit before release 0.4.4.  Tied up some minor
+issues, did some beautification of the log messages, added some comments,
+and made other minor changes.
+
+Revision 1.9  2001/09/23 08:53:49  starky
+The initial checkin of the 0.4.4 release candidate 1 clients.  The release
+includes (but is not limited to):
+o A new client:  pinger
+o A greatly expanded sysmonitor client
+o An API for creating custom clients
+o Extensive documentation on creating custom clients
+o Improved configuration file format
+o E-mail notifications
+Contact Collin at collin.starkweather@colorado with any questions.
+
+Revision 1.8  2001/08/08 20:17:57  starky
+Check in of code for the 0.4.3 client release.  Includes modifications
+to allow for backwards-compatibility to Perl 5.00503 and a critical
+bug fix to the 0.4.2 version of Net::Peep::Conf.
+
 Revision 1.7  2001/07/23 20:17:44  starky
 Fixed a minor bug in setting groups and exclude flags from the command-line
 with the logparser.

@@ -69,6 +69,8 @@ sysmonitor --nodaemon --config=$HOME/peep.conf --debug=9
 
 Michael Gilfix <mgilfix@eecs.tufts.edu> Copyright (C) 2000
 
+Collin Starkweather <collin.starkweather@colorado.edu>
+
 =head1 SEE ALSO
 
 perl(1), peepd(1), Net::Peep::Client, Net::Peep::Client::Sysmonitor,

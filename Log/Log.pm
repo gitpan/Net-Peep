@@ -2,6 +2,7 @@ package Net::Peep::Log;
 
 require 5.00503;
 use strict;
+use Carp;
 # use warnings; # commented out for 5.005 compatibility
 use Time::HiRes qw{ gettimeofday tv_interval };
 
@@ -13,7 +14,7 @@ use vars qw{ @ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION $debug $logfile $__LO
 %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 @EXPORT = qw( );
-$VERSION = do { my @r = (q$Revision$ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+$VERSION = do { my @r = (q$Revision: 1.5 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 $debug = $__LOGFILE = 0;
 
@@ -31,8 +32,13 @@ sub new {
 sub log {
 
     my $self = shift;
-    my $fh = $self->__logHandle();
-    print $fh $self->__beautify(@_);
+    if ($logfile) {
+	open(LOGFILE,">>$logfile") || confess "Cannot open $logfile:  $!";
+	print LOGFILE $self->__beautify(@_);
+	close(LOGFILE);
+    } else {
+	print STDERR $self->__beautify(@_);
+    }
 
 } # end sub log
 
@@ -44,17 +50,22 @@ sub debug {
     if ($debug >= $level) {
 
 	if ($logfile) {
-	    my $fh = $self->__logHandle();
-	    print $fh $self->__beautify(@_);
+	    open(LOGFILE,">>$logfile") || confess "Cannot open $logfile:  $!";
+	    print LOGFILE $self->__beautify(@_);
+	    close(LOGFILE);
 	} else {
 	    print STDERR $self->__beautify(@_);
 	}
 
     }
 
+    return 1;
+
 } # end sub debug
 
 sub __logHandle {
+
+    # this method has been deprecated
 
     my $self = shift;
 
@@ -77,7 +88,20 @@ sub __beautify {
 
     my $self = shift;
 
-    return "[" . scalar(localtime) . "] @_\n";
+    my $message = join '', @_;
+
+    my @return;
+
+    for my $line (split /\n/, $message) {
+	my $time = "[" . scalar(localtime) . "]";
+	chomp($line);
+	$line = "$time $line";
+	$line =~ s/\n/\n$time /sg;
+	$line .= "\n" unless $line =~ /\n$/s;
+	push @return, $line;
+    }
+	
+    return @return;
 
 } # end sub __beautify
 
@@ -85,7 +109,7 @@ sub mark {
 
     # set a time against which future benchmarks can be measured
     my $self = shift;
-    my $identifier = shift || die "Cannot set mark:  No identifier specified.";
+    my $identifier = shift || confess "Cannot set mark:  No identifier specified.";
 
     my $timeofday = gettimeofday;
     $self->{"__MARK"}->{$identifier} = [$timeofday];
@@ -99,9 +123,9 @@ sub benchMark {
 
     # set a time against which future benchmarks can be measured
     my $self = shift;
-    my $identifier = shift || die "Cannot acquire benchmark:  No identifier specified.";
+    my $identifier = shift || confess "Cannot acquire benchmark:  No identifier specified.";
 
-    die "Cannot acquire benchmark:  No mark has been set with identifier '$identifier'."
+    confess "Cannot acquire benchmark:  No mark has been set with identifier '$identifier'."
 	unless exists $self->{"__MARK"}->{$identifier};
 
     my $interval = tv_interval($self->{"__MARK"}->{$identifier},[gettimeofday]);
@@ -244,6 +268,22 @@ http://peep.sourceforge.net
 =head1 CHANGE LOG
 
 $Log: Log.pm,v $
+Revision 1.5  2001/09/23 08:53:57  starky
+The initial checkin of the 0.4.4 release candidate 1 clients.  The release
+includes (but is not limited to):
+o A new client:  pinger
+o A greatly expanded sysmonitor client
+o An API for creating custom clients
+o Extensive documentation on creating custom clients
+o Improved configuration file format
+o E-mail notifications
+Contact Collin at collin.starkweather@colorado with any questions.
+
+Revision 1.4  2001/08/08 20:17:57  starky
+Check in of code for the 0.4.3 client release.  Includes modifications
+to allow for backwards-compatibility to Perl 5.00503 and a critical
+bug fix to the 0.4.2 version of Net::Peep::Conf.
+
 Revision 1.3  2001/07/23 17:46:29  starky
 Added versioning to the configuration file as well as the ability to
 specify groups in addition to / as a replacement for event letters.
@@ -283,6 +323,22 @@ a work-out-of-the-box system.
 Revision 1.3  =head1 CHANGE LOG
  
 $Log: Log.pm,v $
+Revision 1.5  2001/09/23 08:53:57  starky
+The initial checkin of the 0.4.4 release candidate 1 clients.  The release
+includes (but is not limited to):
+o A new client:  pinger
+o A greatly expanded sysmonitor client
+o An API for creating custom clients
+o Extensive documentation on creating custom clients
+o Improved configuration file format
+o E-mail notifications
+Contact Collin at collin.starkweather@colorado with any questions.
+
+Revision 1.4  2001/08/08 20:17:57  starky
+Check in of code for the 0.4.3 client release.  Includes modifications
+to allow for backwards-compatibility to Perl 5.00503 and a critical
+bug fix to the 0.4.2 version of Net::Peep::Conf.
+
 Revision 1.3  2001/07/23 17:46:29  starky
 Added versioning to the configuration file as well as the ability to
 specify groups in addition to / as a replacement for event letters.

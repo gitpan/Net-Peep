@@ -16,7 +16,7 @@ use vars qw{ @ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION };
 %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 @EXPORT = qw( );
-$VERSION = do { my @r = (q$Revision$ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+$VERSION = do { my @r = (q$Revision: 1.2 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 # structure of an event
 # $entry = {
@@ -268,6 +268,11 @@ http://peep.sourceforge.net
 =head1 CHANGE LOG
 
 $Log: Scheduler.pm,v $
+Revision 1.2  2001/08/08 20:17:57  starky
+Check in of code for the 0.4.3 client release.  Includes modifications
+to allow for backwards-compatibility to Perl 5.00503 and a critical
+bug fix to the 0.4.2 version of Net::Peep::Conf.
+
 Revision 1.1  2001/06/04 06:53:09  starky
 A scheduler for events requiring the sigalrm signal for handling.  See
 the PODs for more detail.

@@ -1,5 +1,9 @@
 #!/usr/bin/perl
 
+# Run with
+#
+# perl -I../blib/lib -e 'use Test::Harness qw(&runtests $verbose); $verbose=0; runtests @ARGV;' scheduler.t
+
 # tests Net::Peep::Scheduler and, indirectly, Net::Peep::Peck
 
 BEGIN { $Test::Harness::verbose++; $|++; print "1..5\n"; }

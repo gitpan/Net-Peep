@@ -12,6 +12,7 @@ use Pod::Text;
 use Net::Peep::BC;
 use Net::Peep::Log;
 use Net::Peep::Parser;
+use Net::Peep::Notifier;
 
 require Exporter;
 
@@ -21,7 +22,7 @@ use vars qw{ @ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION };
 %EXPORT_TAGS = ( 'all' => [ qw( INTERVAL MAX_INTERVAL ADJUST_AFTER ) ] );
 @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 @EXPORT = qw( );
-$VERSION = do { my @r = (q$Revision$ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+$VERSION = do { my @r = (q$Revision: 1.8 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 # These are in seconds and are the parameters for File::Tail
 
@@ -42,17 +43,18 @@ sub new {
 
 	my $self = shift;
 	my $class = ref($self) || $self;
-	my $app = shift || confess "Error:  The application needs to tell the Peep library its name.  Exiting ....\n\n.";
 	my $this = {};
 	bless $this, $class;
-	# create a configuration object to store command-line arguments
-	# and configuration file information
-	my $conf = new Net::Peep::Conf;
-	$conf->setApp($app);
-	$this->setconf($conf);
-	return $this;
 
 } # end sub new
+
+sub name {
+
+    my $self = shift;
+    if (@_) { $self->{'NAME'} = shift; }
+    return $self->{'NAME'};
+
+} # end sub name
 
 sub callback {
 
@@ -74,6 +76,36 @@ sub getCallback {
 
 } # end sub getCallback
 
+sub parser {
+
+	my $self = shift;
+	my $parser = shift;
+	confess "Cannot register parser:  Expecting a code reference.  (Got [$parser].)" 
+		unless ref($parser) eq 'CODE';
+	$self->{"__PARSER"} = $parser;
+	return 1;
+
+} # end sub parser
+
+sub getParser {
+
+	my $self = shift;
+	confess "Cannot get parser:  A parser has not been set yet."
+		unless exists $self->{"__PARSER"};
+	return $self->{"__PARSER"};
+
+} # end sub getParser
+
+sub runParser {
+
+    my $self = shift;
+    my @text = @_;
+
+    my $parser = $self->getParser();
+    &$parser(@text);
+
+} # end sub runParser
+
 sub loop {
 
 	my $self = shift;
@@ -85,11 +117,11 @@ sub loop {
 sub peck {
 
 	my $self = shift;
-	my $configuration = $self->getconf();
+	my $conf = $self->conf();
 
 	unless (exists $self->{"__PEEP"}) {
-		if ($configuration->getOptions()) {
-			$self->{"__PEEP"} = Net::Peep::BC->new( $configuration->getApp(), $configuration );
+		if ($conf->getOptions()) {
+			$self->{"__PEEP"} = Net::Peep::BC->new( $self->name(), $conf );
 		} else {
 			confess "Error:  Expecting options to have been parsed by now.";
 		}
@@ -98,12 +130,14 @@ sub peck {
 
 } # end sub peck
 
-sub parseopts {
+sub initialize {
 
 	my $self = shift;
 	my %options = @_;
 
-	my $conf = $self->getconf();
+	my $conf = $self->conf();
+
+	$conf->client($self);
 
 	my (
 		$config,
@@ -164,6 +198,7 @@ sub parseopts {
 		$self->logger()->debug(1,"The Peep configuration file has been identified as [$found]");
 	} else {
 		$self->logger()->debug(1,"No peep configuration file has been identified.");
+		return 0;
 	}
 
 	$conf->setOption('config',$found);
@@ -178,18 +213,17 @@ sub parseopts {
 	$conf->setOption('silent',${$allOptions{'silent'}});
 	$conf->setOption('help',${$allOptions{'help'}});
 
-	$self->setconf($conf);
-
 	return $help ? 0 : 1;
 
-} # end sub parseopts
+} # end sub initialize
 
 sub MainLoop {
 
 	my $self = shift;
 	my $sleep = shift;
 
-	my $conf = $self->getconf() || confess "Cannot begin main loop:  Configuration object not found.";
+	my $client = $self->name() || confess "Cannot begin main loop:  Client name not specified.";
+	my $conf = $self->conf() || confess "Cannot begin main loop:  Configuration object not found.";
 
 	my $fork = $conf->getOption('daemon');
 
@@ -236,30 +270,47 @@ sub MainLoop {
 
 } # end sub MainLoop
 
-sub parseconf {
+sub configure {
 
 	my $self = shift;
-	Net::Peep::Parser->new()->loadConfig( $self->getconf() );
-	return 1;
+	my $conf = $self->conf() 
+	    || confess "Cannot parse configuration object:  Configuration object not found";
+	Net::Peep::Parser->new()->load($conf);
 
-} # end sub parseconf
+	my @version = $self->conf()->versionExists() 
+		? split /\./, $self->conf()->getVersion()
+			: ();
 
-sub getconf {
+	my $config = $conf->getOption('config');
+	unless (@version && $version[0] >= 0 && $version[1] >= 4 && $version[2] > 3) {
+
+		print STDERR <<"eop";
+
+[$0] Warning:  The configuration file 
+
+  $config
+
+appears to use an old configuration file syntax.  You may want to
+update your configuration to be consistent with the 0.4.4 release.
+The older syntax may not be supported as of the 0.5.0 release.
+
+eop
+
+		;
+
+	}
+
+	return $conf;
+
+} # end sub configure
+
+sub conf {
 
 	my $self = shift;
-	confess "Error getting configuration:  The configuration has not been set yet."
-		unless exists $self->{"__CONF"};
+	$self->{"__CONF"} = Net::Peep::Conf->new() unless exists $self->{"__CONF"};
 	return $self->{"__CONF"};
 
-} # end sub getconf
-
-sub setconf {
-
-	my $self = shift;
-	unless (exists $self->{"__CONF"}) { $self->{"__CONF"} = shift }
-	return 1;
-
-} # end sub setconf
+} # end sub conf
 
 sub pods {
 
@@ -291,13 +342,152 @@ sub logger {
 sub shutdown {
 	my $self = shift;
 	print STDERR "Shutting down ...\n";
-	my $configuration = $self->getconf();
-	if (defined $configuration && $configuration->optionExists('pidfile') && -f $configuration->getOption('pidfile') ) {
-		print STDERR "\tUnlinking pidfile ", $configuration->getOption('pidfile'), " ...\n";
-		unlink $configuration->getOption('pidfile');
+	my $notifier = new Net::Peep::Notifier;
+	print STDERR "\tFlushing notification buffers ...\n";
+	my $n = $notifier->force();
+	my $string = $n ? 
+	    "\t$n notifications were flushed from the buffers.\n" : 
+		"\tNo notifications were flushed from the buffers:  The buffers were empty.\n";
+	print STDERR $string;
+	my $conf = $self->conf();
+	my $pidfile = defined $conf && $conf->optionExists('pidfile') && -f $conf->getOption('pidfile')
+	    ? $conf->getOption('pidfile') : '';
+	if ($pidfile) {
+		print STDERR "\tUnlinking pidfile ", $pidfile, " ...\n";
+		unlink $pidfile;
 	}
 	print STDERR "Done.\n";
 }    
+
+sub getConfigSection {
+
+    my $self = shift;
+    my $section = shift;
+    my @text = @_;
+
+    my @return;
+    my $read = 0;
+    for my $line (@text) {
+	if ($line =~ /^\s*$section/) {
+	    $read = 1;
+	} elsif ($line =~ /^\s*end events/) {
+	    $read = 0;
+	} elsif ($read) {
+	    next if $line =~ /^\s*#/ || $line =~ /^\s*$/;
+	    push @return, $line;
+	} else {
+	    # do nothing
+	}
+    }
+    return wantarray ? @return : \@return;
+
+} # end sub getConfigSection
+
+sub tempParseDefaults {
+
+    my $self = shift;
+    my @text = @_;
+
+    my $conf = $self->conf();
+
+    for my $line ($self->getConfigSection('default',@text)) {
+
+	    if ($line =~ /^\s*([\w\-]+)\s+(\S+)\s*$/) {
+		my ($option,$value) = ($1,$2);
+		if ($conf->optionExists($option)) {
+		    $self->logger()->debug(6,"\t\tNot setting option [$option]:  It has already been set (possibly from the command-line).");
+		} else {
+		    $self->logger()->debug(6,"\t\tSetting option [$option] to value [$value].");
+		    $conf->setOption($option,$value) unless $conf->optionExists($option);
+		}
+	    }
+
+    }
+
+} # sub tempParseDefaults
+
+sub getGroups {
+
+    my $self = shift;
+    my $conf = $self->conf();
+    unless (exists $self->{'GROUPS'}) {
+	my $groups = $conf->optionExists('groups') ? $conf->getOption('groups') : '';
+	my @groups = split /,/, $groups;
+	$self->{'GROUPS'} = \@groups;
+    }
+    return wantarray ? @{$self->{'GROUPS'}} : $self->{'GROUPS'};
+    
+} # end sub getGroups
+
+sub getExcluded {
+
+    my $self = shift;
+    my $conf = $self->conf();
+    unless (exists $self->{'EXCLUDED'}) {
+	my $excluded = $conf->optionExists('excluded') ? $conf->getOption('excluded') : '';
+	my @excluded = split /,/, $excluded;
+	$self->{'EXCLUDED'} = \@excluded;
+    }
+    return wantarray ? @{$self->{'EXCLUDED'}} : $self->{'EXCLUDED'};
+    
+} # end sub getExcluded
+
+sub filter {
+
+    my $self = shift;
+    my $object = shift || confess "Object not found";
+    my $nogrp = shift;
+
+    my $conf = $self->conf();
+    
+    my $return = 0;
+    
+    my $name = $object->name();
+
+    $self->logger()->log("Checking [$name] ...");
+
+    unless ($nogrp) {
+
+	my $group = $object->group();
+
+	my @groups = ();
+	my @exclude = ();
+
+	@groups = $self->getGroups('groups');
+	@exclude = $self->getExcluded('exclude');
+    
+	if (grep /^all$/, @groups) {
+	    $return = 1;
+	} else {
+	    for my $group_option (@groups) {
+		$return = 1 if $group eq $group_option;
+	    }
+	}
+    
+	for my $exclude_option (@exclude) {
+	    $return = 0 if $group eq $exclude_option;
+	}
+    
+	$self->logger()->debug(8,"[$name] will be ignored:  The group [$group] is either not in the group ".
+			       "list [@groups] or it is in the excluded list [@exclude].") if $return == 0;
+    }
+
+    my $hosts = $object->hosts();
+    my @version = $conf->versionExists() ? split /\./, $conf->getVersion() : ();
+    
+    if (@version && $version[0] >= 0 && $version[1] >= 4 && $version[2] > 3) {
+	if ($object->pool()->isInHostPool($Net::Peep::Notifier::HOSTNAME)) {
+	    $return = 1;
+	} else {
+	    $return = 0;
+	    $self->logger()->debug(8,"[$name] will be ignored:  Host [$Net::Peep::Notifier::HOSTNAME] ".
+				   "is not in the host pool [$hosts].");
+	}
+    }
+    
+    return $return;
+    
+} # end sub filter
 
 1;
 
@@ -333,13 +523,14 @@ None by default.
 
     new() - The constructor
 
-    parseopts(%options) - Sets the value (using the setOption method
-    of the Net::Peep::Conf object) of all command-line options parsed
-    by Getopt::Long.  Additional options may be specified using
-    %options.  For more information on the format of the %options
-    hash, see Getopt::Long.
+    parseopts($client,%options) - Sets the value (using the setOption
+    method of the Net::Peep::Conf object) of all command-line options
+    parsed by Getopt::Long for the client $client.  Additional options
+    may be specified using %options.  For more information on the
+    format of the %options hash, see Getopt::Long.
 
-    parseconf() - Returns 1 if the option has been defined, 0 otherwise.
+    parseconf() - Returns a configuration object.  To be called after
+    a call to parseopts().
 
     callback($coderef) - Specifies a callback, which must be in the
     form of a code reference, to be used in the MainLoop method.
@@ -349,6 +540,23 @@ None by default.
     $sleep seconds between each call to the callback.
 
     logger() - Returns a Net::Peep::Log object
+
+    getConfigSection($section,@lines) - Retrieves a section by the
+    name of $section from the lines of text @lines.  This is a utility
+    method to assist with parsing sections from the Peep configuration
+    file client config sections (e.g., the events section from the
+    logparser definition in peep.conf).
+
+    tempParseDefaults(@lines) - Parses a defaults section in a client
+    config block in the Peep configuration file.  Note that this code
+    duplicates the parseClientDefault method in Net::Peep::Parser.  It
+    will be deprecated after backwards-compatibility of peep.conf is
+    dropped, probably with the release of 0.5.0.
+
+    getGroups() - Parses the 'groups' option and returns an array of groups.
+
+    getExcluded() - Parses the 'excluded' option and returns a list of
+    excluded groups.
 
 =head1 AUTHOR
 
@@ -379,6 +587,27 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 =head1 CHANGE LOG
 
 $Log: Client.pm,v $
+Revision 1.8  2001/10/01 05:20:05  starky
+Hopefully the final commit before release 0.4.4.  Tied up some minor
+issues, did some beautification of the log messages, added some comments,
+and made other minor changes.
+
+Revision 1.7  2001/09/23 08:53:49  starky
+The initial checkin of the 0.4.4 release candidate 1 clients.  The release
+includes (but is not limited to):
+o A new client:  pinger
+o A greatly expanded sysmonitor client
+o An API for creating custom clients
+o Extensive documentation on creating custom clients
+o Improved configuration file format
+o E-mail notifications
+Contact Collin at collin.starkweather@colorado with any questions.
+
+Revision 1.6  2001/08/08 20:17:57  starky
+Check in of code for the 0.4.3 client release.  Includes modifications
+to allow for backwards-compatibility to Perl 5.00503 and a critical
+bug fix to the 0.4.2 version of Net::Peep::Conf.
+
 Revision 1.5  2001/07/23 17:46:29  starky
 Added versioning to the configuration file as well as the ability to
 specify groups in addition to / as a replacement for event letters.

@@ -194,7 +194,9 @@ keytest supports the basic client options:
 
 =head1 AUTHOR
 
-Michael Gilfix and Alva Couch (C) 2000
+Michael Gilfix and Alva Couch Copyright (C) 2000
+
+Collin Starkweather <collin.starkweather@colorado.edu>
 
 =head1 SEE ALSO
 
