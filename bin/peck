@@ -1,0 +1,57 @@
+#!/usr/bin/perl
+
+use Net::Peep::Peck;
+my $peck = new Net::Peep::Peck;
+$peck->peck();
+
+print "\nPeep!\n\n";
+
+__END__
+
+=head1 NAME
+
+peck - Ad-hoc sound generator for Peep:  The Network Auralizer.
+
+=head1 USAGE
+
+  peck --server=$SERVER --port=$PORT [OPTIONS]
+
+=head1 COMMAND-LINE ARGUMENTS
+
+Command-line arguments processed by peck include:
+
+    --type      The type of sound to produce (e.g., event=0, state=1)
+    --sound     The name or number of the sound to produce
+    --location  The location (left or right speaker) of the sound
+    --volume    The volume of the sound
+    --priority  A priority for producing the sound
+    --dither    The dither
+    --port      The port to which the event will be directed
+    --server    The server to which the event will be directed
+    --debug     The debugging level (Def:  0)
+    --logfile   The file to send log output (Def:  STDOUT)
+    --help      Prints whatever PODs are found in the calling 
+                application
+
+=head1 EXAMPLES
+
+  peck --server=localhost --port=2001 --type=0 --sound=1
+
+  peck --server=localhost --port=2001 --type=1 --sound=1
+
+=head1 ALTERNATIVES
+
+For information on how to sample individual sounds in the Peep sound
+repository, see the Net::Peep::Peck documentation.
+
+=head1 AUTHOR
+
+Michael Gilfix <mgilfix@eecs.tufts.edu> Copyright (C) 2001
+
+Collin Starkweather <collin.starkweather@collinstarkweather.com>
+
+=head1 SEE ALSO
+
+perl(1), Net::Peep::Peck
+
+=cut
