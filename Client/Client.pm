@@ -242,14 +242,21 @@ sub MainLoop {
 		$self->logger()->debug(7,"\tForked.");
 
 		# Else we're the child. Let's write out our pid
-		my $pidfile = $conf->getOption('pidfile') || confess "Cannot fork:  Pidfile not found.";
-		if (open PIDFILE, ">$pidfile") {
-			select (PIDFILE); $| = 1;  # autoflush
-			select (STDERR);
-			print PIDFILE "$$\n";
-			close PIDFILE;
+		my $pid = 0;
+		if ($conf->optionExists('pidfile')) {
+			my $pidfile = $conf->getOption('pidfile') || confess "Cannot fork:  Pidfile not found.";
+			if (open PIDFILE, ">$pidfile") {
+				select (PIDFILE); $| = 1;  # autoflush
+				select (STDERR);
+				print PIDFILE "$$\n";
+				close PIDFILE;
+				$pid = 1;
+			} else {
+				$self->logger()->log("Warning:  Couldn't open pid file:  No pidfile option.");
+				$self->logger()->log("\tContinuing anyway ...");
+			}
 		} else {
-			$self->logger()->log("Warning:  Couldn't open pid file '$pidfile': $!");
+			$self->logger()->log("Warning:  Couldn't open pid file: Pidfile option not specified.");
 			$self->logger()->log("\tContinuing anyway ...");
 		}
 
