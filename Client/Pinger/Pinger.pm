@@ -1,8 +1,8 @@
 package Net::Peep::Client::Pinger;
 
-require 5.005_62;
+require 5.00503;
 use strict;
-use warnings;
+# use warnings; # commented out for 5.005 compatibility
 use Carp;
 use Data::Dumper;
 use File::Tail;
@@ -12,11 +12,13 @@ use Net::Ping::External qw(ping);
 
 require Exporter;
 
-our @ISA = qw(Exporter Net::Peep::Client);
-our %EXPORT_TAGS = ( 'all' => [ qw( INTERVAL MAX_INTERVAL ADJUST_AFTER ) ] );
-our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
-our @EXPORT = qw( );
-our $VERSION = do { my @r = (q$Revision: 1.1 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+use vars qw{ @ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION };
+
+@ISA = qw(Exporter);
+%EXPORT_TAGS = ( 'all' => [ qw( INTERVAL MAX_INTERVAL ADJUST_AFTER ) ] );
+@EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
+@EXPORT = qw( );
+$VERSION = do { my @r = (q$Revision$ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 use constant DEFAULT_PID_FILE => "/var/run/pinger.pid";
 use constant DEFAULT_INTERVAL => 60; # ping every 60 seconds
@@ -131,27 +133,30 @@ or a variety of services on a host are running
 =head1 SYNOPSIS
 
   use Net::Peep::Client::Pinger;
-  blah blah blah
 
 =head1 DESCRIPTION
 
-Stub documentation for Net::Peep::Client::Pinger, created by h2xs. It looks like the
-author of the extension was negligent enough to leave the stub
-unedited.
+Perl extension for checking whether a host or a variety of services on
+a host are running.  It is intended to check not only pingability, but
+services such as telnet, ssh, ftp, etc.
 
-Blah blah blah.
+This client is in development and is not ready for prime time.
 
 =head2 EXPORT
 
 None by default.
 
-
 =head1 AUTHOR
 
-A. U. Thor, a.u.thor@a.galaxy.far.far.away
+Michael Gilfix <mgilfix@eecs.tufts.edu> Copyright (C) 2001
+
+Collin Starkweather <collin.starkweather@colorado.edu>
 
 =head1 SEE ALSO
 
-perl(1).
+perl(1), peepd(1), Net::Peep::BC, Net::Peep::Log, Net::Peep::Parser,
+Net::Peep::Client, pinger.
+
+http://peep.sourceforge.net
 
 =cut

@@ -1,8 +1,8 @@
 package Net::Peep::Peck;
 
-require 5.005_62;
+require 5.00503;
 use strict;
-use warnings;
+# use warnings; # commented out for 5.005 compatibility
 use Carp;
 use Getopt::Long;
 use Socket;
@@ -11,11 +11,13 @@ use Net::Peep::BC;
 
 require Exporter;
 
-our @ISA = qw(Exporter);
-our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
-our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
-our @EXPORT = qw( );
-our $VERSION = do { my @r = (q$Revision: 1.2 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+use vars qw{ @ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION };
+
+@ISA = qw(Exporter);
+%EXPORT_TAGS = ( 'all' => [ qw( ) ] );
+@EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
+@EXPORT = qw( );
+$VERSION = do { my @r = (q$Revision$ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 use constant PROT_MAJORVER => 1;
 use constant PROT_MINORVER => 0;

@@ -1,19 +1,19 @@
 package Net::Peep::Host;
 
-require 5.005_62;
+require 5.00503;
 use strict;
-use warnings;
+# use warnings; # commented out for 5.005 compatibility
 use Carp;
 use Socket;
 require Exporter;
 
-our @ISA = qw(Exporter);
-our %EXPORT_TAGS = ( );
-our @EXPORT_OK = ( );
-our @EXPORT = qw( );
-our $VERSION = do { my @r = (q$Revision: 1.1 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+use vars qw{ @ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION $AUTOLOAD @Attributes };
 
-use vars qw{ $AUTOLOAD @Attributes };
+@ISA = qw(Exporter);
+%EXPORT_TAGS = ( 'all' => [ qw( ) ] );
+@EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
+@EXPORT = qw( );
+$VERSION = do { my @r = (q$Revision$ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 @Attributes = qw{ name ip description };
 

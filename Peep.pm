@@ -1,17 +1,18 @@
 package Net::Peep;
 
-require 5.005_62;
+require 5.00503;
 use strict;
-use warnings;
+# use warnings; # commented out for 5.005 compatibility
 
 require Exporter;
 
-our @ISA = qw(Exporter);
+use vars qw{ @ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION };
 
-our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
-our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
-our @EXPORT = qw( );
-our $VERSION = '0.4.2.1';
+@ISA = qw(Exporter);
+%EXPORT_TAGS = ( 'all' => [ qw( ) ] );
+@EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
+@EXPORT = qw( );
+$VERSION = '0.4.3';
 
 # This module serves no useful purpose at this time other than as a
 # placeholder for documentation
@@ -33,6 +34,10 @@ single network events, but the network as a whole "sounds normal."
 
 This document serves as an introduction to the Peep clients and the
 Peep client architecture.
+
+=head1 SYNOPSIS
+
+See below.
 
 =head1 REQUIRES
 

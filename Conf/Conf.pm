@@ -1,8 +1,8 @@
 package Net::Peep::Conf;
 
-require 5.005_62;
+require 5.00503;
 use strict;
-use warnings;
+# use warnings; # commented out for 5.005 compatibility
 use Carp;
 use Data::Dumper;
 use Net::Peep::Log;
@@ -10,19 +10,13 @@ use Net::Peep::Host;
 
 require Exporter;
 
-our @ISA = qw( Exporter );
+use vars qw{ @ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION };
 
-# Items to export into callers namespace by default. Note: do not export
-# names by default without a very good reason. Use EXPORT_OK instead.
-# Do not simply export all your public functions/methods/constants.
-
-# This allows declaration	use Net::Peep::Conf ':all';
-# If you do not need this, moving things directly into @EXPORT or @EXPORT_OK
-# will save memory.
-our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
-our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
-our @EXPORT = qw( );
-our $VERSION = do { my @r = (q$Revision: 1.6 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+@ISA = qw(Exporter);
+%EXPORT_TAGS = ( 'all' => [ qw( ) ] );
+@EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
+@EXPORT = qw( );
+$VERSION = do { my @r = (q$Revision$ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 sub new {
 

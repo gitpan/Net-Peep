@@ -1,8 +1,8 @@
 package Net::Peep::Client::Logparser;
 
-require 5.005_62;
+require 5.00503;
 use strict;
-use warnings;
+# use warnings; # commented out for 5.005 compatibility
 use Carp;
 use Data::Dumper;
 use File::Tail;
@@ -11,11 +11,13 @@ use Net::Peep::BC;
 
 require Exporter;
 
-our @ISA = qw(Exporter Net::Peep::Client);
-our %EXPORT_TAGS = ( 'all' => [ qw( INTERVAL MAX_INTERVAL ADJUST_AFTER ) ] );
-our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
-our @EXPORT = qw( );
-our $VERSION = do { my @r = (q$Revision: 1.7 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+use vars qw{ @ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION };
+
+@ISA = qw(Exporter Net::Peep::Client);
+%EXPORT_TAGS = ( 'all' => [ qw( INTERVAL MAX_INTERVAL ADJUST_AFTER ) ] );
+@EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
+@EXPORT = qw( );
+$VERSION = do { my @r = (q$Revision$ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 # These are in seconds and are the parameters for File::Tail
 
@@ -301,6 +303,8 @@ documentation will come soon.
 =head1 AUTHOR
 
 Michael Gilfix <mgilfix@eecs.tufts.edu> Copyright (C) 2001
+
+Collin Starkweather <collin.starkweather@colorado.edu>
 
 =head1 SEE ALSO
 

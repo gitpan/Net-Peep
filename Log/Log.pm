@@ -1,20 +1,19 @@
 package Net::Peep::Log;
 
-require 5.005_62;
+require 5.00503;
 use strict;
-use warnings;
+# use warnings; # commented out for 5.005 compatibility
 use Time::HiRes qw{ gettimeofday tv_interval };
 
 require Exporter;
 
-our @ISA = qw(Exporter);
-our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
-our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
-our @EXPORT = qw( );
+use vars qw{ @ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION $debug $logfile $__LOGFILE $__LOGHANDLE };
 
-use vars qw{ $debug $logfile $__LOGFILE $__LOGHANDLE };
-
-our $VERSION = do { my @r = (q$Revision: 1.3 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+@ISA = qw(Exporter);
+%EXPORT_TAGS = ( 'all' => [ qw( ) ] );
+@EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
+@EXPORT = qw( );
+$VERSION = do { my @r = (q$Revision$ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 $debug = $__LOGFILE = 0;
 
